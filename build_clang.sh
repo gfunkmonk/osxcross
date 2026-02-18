@@ -189,8 +189,15 @@ function build()
   cmake ../*llvm*/llvm \
     -DCMAKE_INSTALL_PREFIX=$INSTALLPREFIX \
     -DCMAKE_BUILD_TYPE=Release \
+    -DLLVM_ENABLE_BACKTRACES=OFF \
+    -DLLVM_INCLUDE_BENCHMARKS=OFF \
+    -DLLVM_INCLUDE_EXAMPLES=OFF \
+    -DLLVM_INCLUDE_TESTS=OFF \
+    -DLLVM_BUILD_DOCS=OFF \
+    -DLLVM_BUILD_EXAMPLES=OFF \
+    -DLLVM_BUILD_TESTS=ON \
     -DLLVM_ENABLE_ASSERTIONS=OFF \
-    -DLLVM_ENABLE_PROJECTS="clang" \
+    -DLLVM_ENABLE_PROJECTS="clang;lld" \
     -DLLVM_TARGETS_TO_BUILD="X86;AArch64;ARM" \
     -DLLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN=1
   $MAKE $2 -j $JOBS
@@ -237,7 +244,8 @@ if [ -z "$ENABLE_CLANG_INSTALL" ]; then
   echo "clang/llvm to '$INSTALLPREFIX'"
   echo ""
 else
-  $MAKE -C "$BUILD_DIR/clang-$CLANG_VERSION/$stage" install -j $JOBS VERBOSE=1
+  #$MAKE -C "$BUILD_DIR/clang-$CLANG_VERSION/$stage" install -j $JOBS VERBOSE=1
+  cmake --install "$BUILD_DIR/clang-$CLANG_VERSION/$stage" --strip
   echo ""
   echo "Done!"
   echo ""

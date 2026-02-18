@@ -27,6 +27,7 @@ jobs:
           cat > build_apple_clang_script.sh << 'EOF'
           #!/bin/bash
           set -e
+          CMAKE_VERSION=3.31.8
           echo "Building Apple Clang for Ubuntu $1"
           echo "Architecture: $(uname -m)"
           # Update package list and install dependencies
@@ -57,9 +58,9 @@ jobs:
           # Download and install CMake
           mkdir -p /cmake
           if [ "$(uname -m)" = "x86_64" ] || [ "$(uname -m)" = "amd64" ]; then
-            curl -sSL https://github.com/Kitware/CMake/releases/download/v3.31.8/cmake-3.31.8-linux-x86_64.tar.gz | tar -xz -C /cmake --strip-components=1
+            curl -sSL https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz | tar -xz -C /cmake --strip-components=1
           elif [ "$(uname -m)" = "aarch64" ] || [ "$(uname -m)" = "arm64" ]; then
-            curl -sSL https://github.com/Kitware/CMake/releases/download/v3.31.8/cmake-3.31.8-linux-aarch64.tar.gz | tar -xz -C /cmake --strip-components=1
+            curl -sSL https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-aarch64.tar.gz | tar -xz -C /cmake --strip-components=1
           else
             echo "Unsupported architecture: $(uname -m)"
             exit 1
@@ -167,6 +168,7 @@ jobs:
           cat > build_script.sh << 'EOF'
           #!/bin/bash
           set -e
+          CMAKE_VERSION=3.31.8
           echo "Building osxcross for Ubuntu $1 with SDK $2"
           echo "Architecture: $(uname -m)"
           # Update package list and install dependencies
@@ -203,9 +205,9 @@ jobs:
           # Download and install CMake
           mkdir -p /cmake
           if [ "$(uname -m)" = "x86_64" ] || [ "$(uname -m)" = "amd64" ]; then
-            curl -sSL https://github.com/Kitware/CMake/releases/download/v3.31.8/cmake-3.31.8-linux-x86_64.tar.gz | tar -xz -C /cmake --strip-components=1
+            curl -sSL https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz | tar -xz -C /cmake --strip-components=1
           elif [ "$(uname -m)" = "aarch64" ] || [ "$(uname -m)" = "arm64" ]; then
-            curl -sSL https://github.com/Kitware/CMake/releases/download/v3.31.8/cmake-3.31.8-linux-aarch64.tar.gz | tar -xz -C /cmake --strip-components=1
+            curl -sSL https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-aarch64.tar.gz | tar -xz -C /cmake --strip-components=1
           else
             echo "Unsupported architecture: $(uname -m)"
             exit 1

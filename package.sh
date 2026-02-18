@@ -11,7 +11,7 @@ else
   BINARYPACKAGE="0"
 fi
 
-TMPDIR=`mktemp -d /tmp/XXXXXXXXX`
+TMPDIR=$(mktemp -d)
 
 BASEDIR=`pwd`
 

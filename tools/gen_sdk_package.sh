@@ -226,7 +226,7 @@ for SDK in "${SDKS[@]}"; do
     continue
   fi
 
-  TMP=$(mktemp -d /tmp/XXXXXXXXXXX)
+  TMP=$(mktemp -d)
   cp -r $(rreadlink $SDK) $TMP/$SDK &>/dev/null || true
 
   pushd "$XCODEDIR" &>/dev/null

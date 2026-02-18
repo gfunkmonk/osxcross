@@ -13,13 +13,13 @@ fi
 
 TMPDIR=`mktemp -d /tmp/XXXXXXXXX`
 
-BASEDIR=`pwd`
+BASEDIR=$(pwd)
 
 set +e
-REVHASH=`git rev-parse --short HEAD`
+REVHASH=$(git rev-parse --short HEAD)
 set -e
 
-OSXCROSSVER=`cat build.sh | grep "OSXCROSS_VERSION" | head -n1 | tr '=' ' ' | awk '{print $2}'`
+OSXCROSSVER=$(grep "^VERSION=" build.sh | head -n1 | cut -d= -f2)
 
 pushd $TMPDIR
 
@@ -33,7 +33,7 @@ if [ $BINARYPACKAGE != "1" ]; then
   cp -r $BASEDIR/oclang .
   cp -r $BASEDIR/wrapper .
 else
-  ldd `ls $BASEDIR/target/bin/x86_64-apple-darwin*-ld | head -n1` | grep "libLTO.so" &>/dev/null && \
+  ldd $(ls $BASEDIR/target/bin/x86_64-apple-darwin*-ld | head -n1) | grep "libLTO.so" &>/dev/null && \
     echo "-->> WARNING: ld is linked dynamically against libLTO.so! Consider recompiling with DISABLE_LTO_SUPPORT=1 <<--" && \
     sleep 5
 

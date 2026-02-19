@@ -23,13 +23,12 @@ jobs:
       - uses: actions/checkout@v6
       - name: Cache SDK packages
         id: cache-sdk-packages
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: sdk-${{ matrix.macos_versions }}
           key: sdk-packages-macos-${{ matrix.macos_versions }}-${{ hashFiles('tools/gen_sdk_package.sh') }}-v1
           restore-keys: |
             sdk-packages-macos-${{ matrix.macos_versions }}
-          save-always: true
       - name: SDK Package
         if: steps.cache-sdk-packages.outputs.cache-hit != 'true'
         run: |
@@ -43,6 +42,12 @@ jobs:
           done
           mkdir -p sdk-${{ matrix.macos_versions }}
           mv *.sdk.tar.xz sdk-${{ matrix.macos_versions }}
+      - name: Save SDK cache
+        uses: actions/cache/save@v4
+        if: always() && steps.cache-sdk-package.outputs.cache-hit != 'true'
+        with:
+          path: sdk-${{ matrix.macos_versions }}
+          key: ${{ steps.cache-sdk-package.outputs.cache-primary-key }}
       - name: Upload SDK
         id: upload_sdk
         uses: actions/upload-artifact@v4

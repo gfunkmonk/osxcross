@@ -4,7 +4,7 @@ name: Release osxcross
 on: workflow_dispatch
 jobs:
   package_sdks:
-    uses: ./.github/workflows/sdk.yml
+    uses: ./.github/workflows/sdk2.yml
   build_apple_clang:
     name: Build Apple Clang
     strategy:
@@ -22,13 +22,12 @@ jobs:
       - uses: actions/checkout@v6
       - name: Cache Apple Clang build
         id: cache-apple-clang
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: dist/
           key: apple-clang-21-ubuntu-${{ matrix.ubuntu_version }}-${{ matrix.runs-on }}-${{ hashFiles('build_apple_clang.sh', 'build_clang.sh', '.github/workflows/release.yml') }}
           restore-keys: |
             apple-clang-21-ubuntu-${{ matrix.ubuntu_version }}-${{ matrix.runs-on }}
-          save-always: true
       - name: Create Apple Clang build script
         if: steps.cache-apple-clang.outputs.cache-hit != 'true'
         run: |
@@ -61,8 +60,7 @@ jobs:
             software-properties-common \
             gnupg \
             build-essential \
-            ninja-build \
-            ccache
+            ninja-build
           # Download and install CMake
           mkdir -p /cmake
           if [ "$(uname -m)" = "x86_64" ] || [ "$(uname -m)" = "amd64" ]; then
@@ -91,35 +89,6 @@ jobs:
           fi
           EOF
           chmod +x build_apple_clang_script.sh
-      - name: 🅲🅲🅰🅲🅷🅴 🅴🅽🆅🅸🆁🅾🅽🅼🅴🅽🆃 🆅🅰🆁🅸🅰🅱🅻🅴🆂 
-        run: |
-          echo "CCACHE_NLEVELS=4" >> $GITHUB_ENV
-          # Setup CCACHE Dir
-          sudo mkdir -p /mnt/ccache
-          sudo chown -R $USER:$USER /mnt/ccache
-          echo "CCACHE_DIR=/mnt/ccache" >> $GITHUB_ENV
-          echo "CCACHE Dir Set!"
-          df -h
-          echo "CCACHE Environment set!"
-      - name: 🏎 🅴🅽🅰🅱🅻🅴 🅲🅲🅰🅲🅷🅴 🏁
-        uses: Chocobo1/setup-ccache-action@v1
-        with:
-          update_packager_index: true
-          install_ccache: true
-          prepend_symlinks_to_path: true
-          ccache_options: |
-            max_size=10000M
-            compression=true
-            compression_level=6
-            hash_dir=false
-            sloppiness=file_macro,locale,time_macros
-            file_clone=true
-            hard_link=false
-            inode_cache=true
-            recache=false
-            direct_mode=true
-            depend_mode=true
-            compiler_check=content
       - name: Build Apple Clang
         if: steps.cache-apple-clang.outputs.cache-hit != 'true'
         run: |
@@ -227,8 +196,7 @@ jobs:
             software-properties-common \
             gnupg \
             build-essential \
-            ninja-build \
-            ccache
+            ninja-build
           export TARGET_DIR=/usr/local/osxcross
           CLANG_DIR=$TARGET_DIR/clang
           mkdir -p $CLANG_DIR
@@ -262,35 +230,6 @@ jobs:
           fi
           EOF
           chmod +x build_script.sh
-      - name: 🅲🅲🅰🅲🅷🅴 🅴🅽🆅🅸🆁🅾🅽🅼🅴🅽🆃 🆅🅰🆁🅸🅰🅱🅻🅴🆂 
-        run: |
-          echo "CCACHE_NLEVELS=4" >> $GITHUB_ENV
-          # Setup CCACHE Dir
-          sudo mkdir -p /mnt/ccache
-          sudo chown -R $USER:$USER /mnt/ccache
-          echo "CCACHE_DIR=/mnt/ccache" >> $GITHUB_ENV
-          echo "CCACHE Dir Set!"
-          df -h
-          echo "CCACHE Environment set!"
-      - name: 🏎 🅴🅽🅰🅱🅻🅴 🅲🅲🅰🅲🅷🅴 🏁
-        uses: Chocobo1/setup-ccache-action@v1
-        with:
-          update_packager_index: true
-          install_ccache: true
-          prepend_symlinks_to_path: true
-          ccache_options: |
-            max_size=10000M
-            compression=true
-            compression_level=6
-            hash_dir=false
-            sloppiness=file_macro,locale,time_macros
-            file_clone=true
-            hard_link=false
-            inode_cache=true
-            recache=false
-            direct_mode=true
-            depend_mode=true
-            compiler_check=content
       - name: Build osxcross
         run: |
           docker run --rm \
@@ -298,6 +237,12 @@ jobs:
             --workdir /osxcross \
             ubuntu:${{ matrix.ubuntu_version }} \
             /bin/bash -c "/osxcross/build_script.sh '${{ matrix.ubuntu_version }}' '${{ matrix.sdk_versions }}'"
+      - name: Save Apple Clang build cache
+        uses: actions/cache/save@v4
+        if: always() && steps.cache-apple-clang.outputs.cache-hit != 'true'
+        with:
+          path: dist/
+          key: ${{ steps.cache-apple-clang.outputs.cache-primary-key }}
       - name: Release
         uses: softprops/action-gh-release@v2
         with:

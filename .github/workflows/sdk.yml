@@ -23,7 +23,15 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Cache SDK packages
+        id: cache-sdk-packages
+        uses: actions/cache@v4
+        with:
+          path: sdk-${{ matrix.macos_versions }}
+          key: sdk-packages-macos-${{ matrix.macos_versions }}-${{ hashFiles('tools/gen_sdk_package.sh') }}-v1
+
       - name: SDK Package
+        if: steps.cache-sdk-packages.outputs.cache-hit != 'true'
         run: |
           xcode-select -p
           xcodebuild -version

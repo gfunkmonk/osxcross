@@ -4,7 +4,7 @@ name: Release osxcross
 on: workflow_dispatch
 jobs:
   package_sdks:
-    uses: ./.github/workflows/sdk2.yml
+    uses: ./.github/workflows/sdk.yml
   build_apple_clang:
     name: Build Apple Clang
     strategy:

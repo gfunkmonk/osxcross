@@ -75,22 +75,6 @@ jobs:
           # List SDK files for verification
           ls -la *.sdk.tar.xz 2>/dev/null || echo "No SDK files found"
 
-          # Create individual artifact uploads for each SDK
-          for file in MacOSX*.sdk.tar.xz; do
-            if [ -f "$file" ]; then
-              # Extract version (MacOSX10.13.sdk.tar.xz -> 10-13)
-              name=$(echo "$file" | sed 's/\.sdk\.tar\.xz$//')
-              name=$(echo "$name" | sed 's/\./-/g')
-              artifact_name=$(echo "$name" | sed 's/^MacOSX-*//')
-              if [ -n "$artifact_name" ]; then
-                echo "Will upload $file as artifact: $artifact_name"
-                # Create a marker file for this artifact
-                mkdir -p "/tmp/artifacts/$artifact_name"
-                cp "$file" "/tmp/artifacts/$artifact_name/"
-              fi
-            fi
-          done
-
       - name: Upload SDK artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -115,3 +99,4 @@ jobs:
             }).filter(name => name && name !== '');
             console.log('SDK versions:', sdk_versions);
             return sdk_versions;
+

@@ -101,8 +101,8 @@ jobs:
       - name: 🏎 🅴🅽🅰🅱🅻🅴 🅲🅲🅰🅲🅷🅴 🏁
         uses: Chocobo1/setup-ccache-action@v1
         with:
-          update_packager_index: false
-          install_ccache: false
+          update_packager_index: true
+          install_ccache: true
           prepend_symlinks_to_path: true
           ccache_options: |
             max_size=10000M
@@ -272,8 +272,8 @@ jobs:
       - name: 🏎 🅴🅽🅰🅱🅻🅴 🅲🅲🅰🅲🅷🅴 🏁
         uses: Chocobo1/setup-ccache-action@v1
         with:
-          update_packager_index: false
-          install_ccache: false
+          update_packager_index: true
+          install_ccache: true
           prepend_symlinks_to_path: true
           ccache_options: |
             max_size=10000M

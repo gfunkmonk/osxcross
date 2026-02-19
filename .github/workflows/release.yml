@@ -10,13 +10,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ubuntu_version:
-          - 20.04
-          - 22.04
-          - 24.04
-        runs-on:
-          - ubuntu-latest
-          - ubuntu-24.04-arm
+        include:
+          # x86_64 builds
+          - ubuntu_version: 20.04
+            runs-on: ubuntu-latest
+          - ubuntu_version: 22.04
+            runs-on: ubuntu-latest
+          - ubuntu_version: 24.04
+            runs-on: ubuntu-latest
+          # aarch64 build
+          - ubuntu_version: 24.04
+            runs-on: ubuntu-24.04-arm
     runs-on: ${{ matrix.runs-on }}
     steps:
       - uses: actions/checkout@v6
@@ -203,14 +207,18 @@ jobs:
       fail-fast: false
       matrix:
         sdk_versions: ${{ fromJSON(needs.package_sdks.outputs.SDK_VERSIONS) }}
-        ubuntu_version:
-          - 20.04
-          - 22.04
-          - 24.04
-        runs-on:
-          - ubuntu-latest
-          - ubuntu-24.04-arm
-    runs-on: ${{ matrix.runs-on }}
+        config:
+          # x86_64 builds
+          - ubuntu_version: 20.04
+            runs-on: ubuntu-latest
+          - ubuntu_version: 22.04
+            runs-on: ubuntu-latest
+          - ubuntu_version: 24.04
+            runs-on: ubuntu-latest
+          # aarch64 build
+          - ubuntu_version: 24.04
+            runs-on: ubuntu-24.04-arm
+    runs-on: ${{ matrix.config.runs-on }}
     needs:
       - package_sdks
       - release_sdks
@@ -225,16 +233,16 @@ jobs:
       - name: Download Apple Clang
         uses: actions/download-artifact@v4
         with:
-          name: apple-clang-${{ matrix.ubuntu_version }}-${{ matrix.runs-on == 'ubuntu-24.04-arm' && 'aarch64' || 'x86_64' }}
+          name: apple-clang-${{ matrix.config.ubuntu_version }}-${{ matrix.config.runs-on == 'ubuntu-24.04-arm' && 'aarch64' || 'x86_64' }}
           path: apple-clang
       - name: Cache osxcross build
         id: cache-osxcross
         uses: actions/cache/restore@v4
         with:
           path: dist/
-          key: osxcross-ubuntu-${{ matrix.ubuntu_version }}-${{ matrix.runs-on }}-${{ hashFiles('build.sh', '.github/workflows/release.yml') }}
+          key: osxcross-ubuntu-${{ matrix.config.ubuntu_version }}-${{ matrix.config.runs-on }}-${{ hashFiles('build.sh', '.github/workflows/release.yml') }}
           restore-keys: |
-            osxcross-ubuntu-${{ matrix.ubuntu_version }}-${{ matrix.runs-on }}
+            osxcross-ubuntu-${{ matrix.config.ubuntu_version }}-${{ matrix.config.runs-on }}
       - name: Create build script
         run: |
           cat > build_script.sh << 'EOF'
@@ -311,8 +319,8 @@ jobs:
             --env CCACHE_DIR=/root/.ccache \
             --env PATH="/usr/lib/ccache:$PATH" \
             --workdir /osxcross \
-            ubuntu:${{ matrix.ubuntu_version }} \
-            /bin/bash -c "/osxcross/build_script.sh '${{ matrix.ubuntu_version }}' '${{ matrix.sdk_versions }}'"
+            ubuntu:${{ matrix.config.ubuntu_version }} \
+            /bin/bash -c "/osxcross/build_script.sh '${{ matrix.config.ubuntu_version }}' '${{ matrix.sdk_versions }}'"
       - name: Save osxcross build cache
         uses: actions/cache/save@v4
         if: always() && steps.cache-osxcross.outputs.cache-hit != 'true'

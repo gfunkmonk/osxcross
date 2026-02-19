@@ -75,14 +75,6 @@ jobs:
           # List SDK files for verification
           ls -la *.sdk.tar.xz 2>/dev/null || echo "No SDK files found"
 
-      - name: Upload SDK artifacts
-        uses: actions/upload-artifact@v6
-        with:
-          name: sdk-files-collected
-          path: MacOSX*.sdk.tar.xz
-          compression-level: 0
-          if-no-files-found: error
-
       - name: Get all SDK Versions
         id: get_all_sdk_versions
         uses: actions/github-script@v7
@@ -99,4 +91,33 @@ jobs:
             }).filter(name => name && name !== '');
             console.log('SDK versions:', sdk_versions);
             return sdk_versions;
+
+      - name: Upload individual SDK artifacts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const { DefaultArtifactClient } = require('@actions/artifact');
+            const artifact = new DefaultArtifactClient();
+            
+            const files = fs.readdirSync('.').filter(file =>
+              file.endsWith('.sdk.tar.xz') && file.startsWith('MacOSX')
+            );
+            
+            for (const file of files) {
+              // Convert MacOSX10.13.sdk.tar.xz to 10-13
+              const sdkVersion = file
+                .replace(/\.sdk\.tar\.xz$/, '')
+                .replace(/^MacOSX/, '')
+                .replace(/\./g, '-');
+              
+              console.log(`Uploading ${file} as artifact ${sdkVersion}`);
+              
+              await artifact.uploadArtifact(
+                sdkVersion,
+                [file],
+                '.',
+                { compressionLevel: 0 }
+              );
+            }
 

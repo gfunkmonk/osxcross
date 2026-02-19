@@ -116,3 +116,50 @@ jobs:
             console.log('SDK versions:', sdk_versions);
             return sdk_versions;
 
+      - name: Upload individual SDK artifacts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { execSync } = require('child_process');
+            const fs = require('fs');
+            const path = require('path');
+            
+            // Install @actions/artifact with CommonJS compatibility
+            execSync('npm install @actions/artifact@1.1.2');
+            const artifact = require('@actions/artifact');
+            const artifactClient = artifact.create();
+            
+            // Upload each SDK from /tmp/artifacts/ as a separate artifact
+            const artifactsDir = '/tmp/artifacts';
+            if (!fs.existsSync(artifactsDir)) {
+              console.log('No /tmp/artifacts directory found');
+              return;
+            }
+            
+            const sdkDirs = fs.readdirSync(artifactsDir).filter(name =>
+              fs.statSync(path.join(artifactsDir, name)).isDirectory()
+            );
+            
+            for (const sdkVersion of sdkDirs) {
+              const sdkPath = path.join(artifactsDir, sdkVersion);
+              const files = fs.readdirSync(sdkPath).filter(f => f.endsWith('.sdk.tar.xz'));
+              
+              if (files.length > 0) {
+                const filePath = path.join(sdkPath, files[0]);
+                console.log(`Uploading ${filePath} as artifact ${sdkVersion}`);
+                
+                try {
+                  await artifactClient.uploadArtifact(
+                    sdkVersion,
+                    [filePath],
+                    artifactsDir,
+                    { continueOnError: false }
+                  );
+                  console.log(`Successfully uploaded artifact ${sdkVersion}`);
+                } catch (error) {
+                  console.error(`Failed to upload ${sdkVersion}:`, error);
+                  throw error;
+                }
+              }
+            }
+

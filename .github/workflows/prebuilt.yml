@@ -43,7 +43,7 @@ jobs:
       - name: download SDK
         run: |
           # Try tar.xz first, fall back to tar.bz2 if not available
-          if ! wget -P tarballs https://github.com/joseluisq/macosx-sdks/releases/download/${{ inputs.version }}/MacOSX${{ inputs.version }}.sdk.tar.xz; then
+          if ! wget -q -P tarballs https://github.com/joseluisq/macosx-sdks/releases/download/${{ inputs.version }}/MacOSX${{ inputs.version }}.sdk.tar.xz 2>/dev/null; then
             echo "Failed to download tar.xz format, attempting tar.bz2 format..."
             wget -P tarballs https://github.com/joseluisq/macosx-sdks/releases/download/${{ inputs.version }}/MacOSX${{ inputs.version }}.sdk.tar.bz2 || {
               echo "Error: Failed to download SDK in either tar.xz or tar.bz2 format"

@@ -33,7 +33,7 @@ if [ $BINARYPACKAGE != "1" ]; then
   cp -r "$BASEDIR/oclang" .
   cp -r "$BASEDIR/wrapper" .
 else
-  ldd $(ls $BASEDIR/target/bin/x86_64-apple-darwin*-ld | head -n1) | grep "libLTO.so" &>/dev/null && \
+  ldd $(ls "$BASEDIR"/target/bin/x86_64-apple-darwin*-ld | head -n1) | grep "libLTO.so" &>/dev/null && \
     echo "-->> WARNING: ld is linked dynamically against libLTO.so! Consider recompiling with DISABLE_LTO_SUPPORT=1 <<--" && \
     sleep 5
 

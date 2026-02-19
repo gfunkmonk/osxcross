@@ -20,7 +20,7 @@ jobs:
           - 26
     runs-on: macos-${{ matrix.macos_versions }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: SDK Package
         run: |
@@ -36,7 +36,7 @@ jobs:
           mv *.sdk.tar.xz sdk-${{ matrix.macos_versions }}
       - name: Upload SDK
         id: upload_sdk
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sdk-${{ matrix.macos_versions }}
           path: sdk-${{ matrix.macos_versions }}
@@ -50,7 +50,7 @@ jobs:
       SDK_VERSIONS: ${{ steps.get_all_sdk_versions.outputs.result }}
     steps:
       - name: Download SDK artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: 'sdk-*'
           merge-multiple: false
@@ -76,7 +76,7 @@ jobs:
           ls -la *.sdk.tar.xz 2>/dev/null || echo "No SDK files found"
 
       - name: Upload SDK artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sdk-files-collected
           path: MacOSX*.sdk.tar.xz

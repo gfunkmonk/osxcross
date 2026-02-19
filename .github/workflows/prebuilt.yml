@@ -51,7 +51,7 @@ jobs:
           tar -cvf osxcross.tar osxcross
           xz -9 osxcross.tar          
       - name: upload artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: osxcross-linux-x86-64
           path: osxcross.tar.xz

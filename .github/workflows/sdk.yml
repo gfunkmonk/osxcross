@@ -49,79 +49,69 @@ jobs:
     outputs:
       SDK_VERSIONS: ${{ steps.get_all_sdk_versions.outputs.result }}
     steps:
-      - name: Collect SDK
-        id: collect_sdk
-        uses: actions/github-script@v7
+      - name: Download SDK artifacts
+        uses: actions/download-artifact@v4
         with:
-          script: |
-            const { execSync } = require('child_process');
-            execSync('npm install @actions/artifact@2.1.7');
-            const { DefaultArtifactClient } = require('@actions/artifact');
-            const artifact = new DefaultArtifactClient();
-            const fs = require('fs');
-            const allArtifacts = await artifact.listArtifacts();
-            const sdkArtifacts = allArtifacts.artifacts.filter(a => a.name.startsWith('sdk-'));
-            for (const sdkArtifact of sdkArtifacts) {
-              console.log('download', sdkArtifact);
-              await artifact.downloadArtifact(sdkArtifact.id, {
-                path: sdkArtifact.name
-              });
-            }
-            const sdkFolders = fs.readdirSync('.').filter(folder => folder.startsWith('sdk-'));
-            for (const folder of sdkFolders) {
-              const sdkFiles = fs.readdirSync(folder).filter(file => file.endsWith('.sdk.tar.xz'));
-              for (const file of sdkFiles) {
-                const sourcePath = `${folder}/${file}`;
-                console.log(`collect ${sourcePath}`);
-                fs.renameSync(sourcePath, file);
-              }
-            }
-            const files = fs.readdirSync('.');
-            for (const file of files) {
-              if (!file.endsWith('.sdk.tar.xz') || (!file.startsWith('MacOSX'))) {
-                continue;
-              }
-              const name = file.replace(/\.sdk\.tar\.xz$/, '').replace('.', '-');
-              if (name === 'MacOSX') {
-                continue;
-              }
-              const maxRetries = 3;
-              let retries = 0;
-              let success = false;
-              while (retries < maxRetries && !success) {
-                try {
-                  await artifact.uploadArtifact(
-                    name.replace(/^MacOSX/, ''),
-                    [file],
-                    '.',
-                    {
-                      compressionLevel: 0
-                    }
-                  );
-                  success = true;
-                } catch (error) {
-                  console.error(`upload ${name} failed, retry ${retries + 1}, error: ${error.message}`);
-                  retries++;
-                  if (retries < maxRetries) {
-                    try {
-                      await artifact.deleteArtifact(name);
-                    } catch (deleteError) {}
-                  }
-                }
-              }
-              if (!success) {
-                throw new Error(`upload ${name} failed`);
-              }
-            }
+          pattern: 'sdk-*'
+          merge-multiple: false
+
+      - name: Collect and upload SDKs
+        shell: bash
+        run: |
+          # Move SDK files from artifact folders to current directory
+          for folder in sdk-*; do
+            if [ -d "$folder" ]; then
+              echo "Processing folder: $folder"
+              for file in "$folder"/*.sdk.tar.xz; do
+                if [ -f "$file" ]; then
+                  filename=$(basename "$file")
+                  echo "Moving $file to $filename"
+                  mv "$file" "$filename"
+                fi
+              done
+            fi
+          done
+
+          # List SDK files for verification
+          ls -la *.sdk.tar.xz 2>/dev/null || echo "No SDK files found"
+
+          # Create individual artifact uploads for each SDK
+          for file in MacOSX*.sdk.tar.xz; do
+            if [ -f "$file" ]; then
+              # Extract version (MacOSX10.13.sdk.tar.xz -> 10-13)
+              name=$(echo "$file" | sed 's/\.sdk\.tar\.xz$//')
+              name=$(echo "$name" | sed 's/\./-/g')
+              artifact_name=$(echo "$name" | sed 's/^MacOSX-*//')
+              if [ -n "$artifact_name" ]; then
+                echo "Will upload $file as artifact: $artifact_name"
+                # Create a marker file for this artifact
+                mkdir -p "/tmp/artifacts/$artifact_name"
+                cp "$file" "/tmp/artifacts/$artifact_name/"
+              fi
+            fi
+          done
+
+      - name: Upload SDK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdk-files-collected
+          path: MacOSX*.sdk.tar.xz
+          compression-level: 0
+          if-no-files-found: error
+
       - name: Get all SDK Versions
         id: get_all_sdk_versions
         uses: actions/github-script@v7
         with:
           script: |
-            const { execSync } = require('child_process');
-            execSync('npm install @actions/artifact@2.1.7');
-            const { DefaultArtifactClient } = require('@actions/artifact');
-            const artifact = new DefaultArtifactClient();
-            const sdks = await artifact.listArtifacts();
-            const sdk_versions = sdks.artifacts.map(sdk => sdk.name).filter(name => !name.startsWith('sdk-') && !name.startsWith('apple-clang-'));
+            const fs = require('fs');
+            const files = fs.readdirSync('.').filter(file =>
+              file.endsWith('.sdk.tar.xz') && file.startsWith('MacOSX')
+            );
+            const sdk_versions = files.map(file => {
+              // Convert MacOSX10.13.sdk.tar.xz to 10-13
+              const name = file.replace(/\.sdk\.tar\.xz$/, '');
+              return name.replace(/^MacOSX/, '').replace(/\./g, '-');
+            }).filter(name => name && name !== '');
+            console.log('SDK versions:', sdk_versions);
             return sdk_versions;

@@ -184,7 +184,7 @@ function create_arch_symlinks()
   if [ "$arch" = "$default_arch" ]; then
     return
   fi
-  for TOOL in ${TOOLS[@]}; do
+  for TOOL in "${TOOLS[@]}"; do
     verbose_cmd create_symlink $TOOL $(echo "$TOOL" | $SED "s/$(first_supported_arch)/$arch/g")
   done
 }

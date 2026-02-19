@@ -27,6 +27,9 @@ jobs:
         with:
           path: sdk-${{ matrix.macos_versions }}
           key: sdk-packages-macos-${{ matrix.macos_versions }}-${{ hashFiles('tools/gen_sdk_package.sh') }}-v1
+          restore-keys: |
+            sdk-packages-macos-${{ matrix.macos_versions }}
+          save-always: true
       - name: SDK Package
         if: steps.cache-sdk-packages.outputs.cache-hit != 'true'
         run: |

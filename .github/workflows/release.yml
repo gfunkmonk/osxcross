@@ -26,6 +26,9 @@ jobs:
         with:
           path: dist/
           key: apple-clang-21-ubuntu-${{ matrix.ubuntu_version }}-${{ matrix.runs-on }}-${{ hashFiles('build_apple_clang.sh', 'build_clang.sh', '.github/workflows/release.yml') }}
+          restore-keys: |
+            apple-clang-21-ubuntu-${{ matrix.ubuntu_version }}-${{ matrix.runs-on }}
+          save-always: true
       - name: Create Apple Clang build script
         if: steps.cache-apple-clang.outputs.cache-hit != 'true'
         run: |

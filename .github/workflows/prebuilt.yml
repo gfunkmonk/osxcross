@@ -65,5 +65,5 @@ jobs:
       - name: upload artifact
         uses: actions/upload-artifact@v6
         with:
-          name: osxcross-linux-x86-64
+          name: osxcross-linux-x86-64-${{ inputs.version }}
           path: osxcross-${{ inputs.version }}.tar.xz

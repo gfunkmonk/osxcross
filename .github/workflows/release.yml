@@ -73,7 +73,7 @@ jobs:
           # Build Apple Clang
           export INSTALLPREFIX=/usr/local/apple-clang
           export CLANG_VERSION=21
-          UNATTENDED=1 ENABLE_CLANG_INSTALL=1 PORTABLE=1 JOBS=$(nproc) bash build_apple_clang.sh
+          UNATTENDED=1 ENABLE_CLANG_INSTALL=1 PORTABLE=1 JOBS=$(nproc) bash ./build_apple_clang.sh
           # Create distribution package
           mkdir -p dist
           if [ "$(uname -m)" = "x86_64" ] || [ "$(uname -m)" = "amd64" ]; then

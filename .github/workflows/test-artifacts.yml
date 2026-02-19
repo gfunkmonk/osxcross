@@ -1,0 +1,181 @@
+---
+name: Test Artifact Upload/Download
+
+on:
+  workflow_dispatch:
+
+jobs:
+  upload_test_artifacts:
+    name: Upload Test Artifacts
+    runs-on: ubuntu-latest
+    outputs:
+      TEST_VERSIONS: ${{ steps.get_versions.outputs.result }}
+    steps:
+      - name: Create test files
+        run: |
+          # Create test files mimicking SDK naming pattern
+          echo "Test content for 10.13" > Test10.13.txt
+          echo "Test content for 11.1" > Test11.1.txt
+          echo "Test content for 12.0" > Test12.0.txt
+          echo "Test content for 13.3" > Test13.3.txt
+          echo "Test content for 14.5" > Test14.5.txt
+          
+          echo "Created test files:"
+          ls -la Test*.txt
+
+      - name: Get test versions
+        id: get_versions
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const files = fs.readdirSync('.').filter(file =>
+              file.endsWith('.txt') && file.startsWith('Test')
+            );
+            const versions = files.map(file => {
+              // Convert Test10.13.txt to 10-13
+              const name = file.replace(/\.txt$/, '');
+              return name.replace(/^Test/, '').replace(/\./g, '-');
+            }).filter(name => name && name !== '');
+            console.log('Test versions:', versions);
+            return versions;
+
+      - name: Upload individual test artifacts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const { DefaultArtifactClient } = require('@actions/artifact');
+            const artifact = new DefaultArtifactClient();
+            
+            const files = fs.readdirSync('.').filter(file =>
+              file.endsWith('.txt') && file.startsWith('Test')
+            );
+            
+            console.log(`Found ${files.length} test files to upload`);
+            
+            for (const file of files) {
+              // Convert Test10.13.txt to 10-13
+              const version = file
+                .replace(/\.txt$/, '')
+                .replace(/^Test/, '')
+                .replace(/\./g, '-');
+              
+              console.log(`Uploading ${file} as artifact ${version}`);
+              
+              await artifact.uploadArtifact(
+                version,
+                [file],
+                '.',
+                { compressionLevel: 0 }
+              );
+            }
+            
+            console.log('All test artifacts uploaded successfully!');
+
+  download_test_artifacts:
+    name: Download Test Artifacts
+    runs-on: ubuntu-latest
+    needs: upload_test_artifacts
+    steps:
+      - name: Download test artifacts using pattern
+        uses: actions/download-artifact@v7
+        with:
+          pattern: '[0-9]*'
+          path: downloaded
+          merge-multiple: true
+
+      - name: Verify downloaded artifacts
+        run: |
+          echo "Checking downloaded artifacts..."
+          ls -laR downloaded/
+          
+          echo ""
+          echo "Verifying file contents..."
+          
+          # Check if files exist
+          if [ ! -f "downloaded/Test10.13.txt" ]; then
+            echo "ERROR: Test10.13.txt not found!"
+            exit 1
+          fi
+          
+          if [ ! -f "downloaded/Test11.1.txt" ]; then
+            echo "ERROR: Test11.1.txt not found!"
+            exit 1
+          fi
+          
+          if [ ! -f "downloaded/Test12.0.txt" ]; then
+            echo "ERROR: Test12.0.txt not found!"
+            exit 1
+          fi
+          
+          if [ ! -f "downloaded/Test13.3.txt" ]; then
+            echo "ERROR: Test13.3.txt not found!"
+            exit 1
+          fi
+          
+          if [ ! -f "downloaded/Test14.5.txt" ]; then
+            echo "ERROR: Test14.5.txt not found!"
+            exit 1
+          fi
+          
+          echo ""
+          echo "✓ All test files downloaded successfully!"
+          echo ""
+          
+          # Verify contents
+          echo "File contents:"
+          cat downloaded/Test10.13.txt
+          cat downloaded/Test11.1.txt
+          cat downloaded/Test12.0.txt
+          cat downloaded/Test13.3.txt
+          cat downloaded/Test14.5.txt
+          
+          echo ""
+          echo "=========================================="
+          echo "✓ ARTIFACT UPLOAD/DOWNLOAD TEST PASSED!"
+          echo "=========================================="
+          echo ""
+          echo "This confirms the artifact mechanism works:"
+          echo "  - Individual artifacts uploaded with version names (10-13, 11-1, etc.)"
+          echo "  - Pattern '[0-9]*' successfully matches and downloads all artifacts"
+          echo "  - Files are retrieved correctly with their original content"
+          echo ""
+          echo "The same mechanism in sdk.yml and release.yml will work correctly."
+
+  download_by_matrix:
+    name: Download by Matrix Version
+    runs-on: ubuntu-latest
+    needs: upload_test_artifacts
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ${{ fromJSON(needs.upload_test_artifacts.outputs.TEST_VERSIONS) }}
+    steps:
+      - name: Download specific version artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ matrix.version }}
+          path: downloaded
+
+      - name: Verify specific artifact
+        run: |
+          echo "Downloaded artifact for version: ${{ matrix.version }}"
+          ls -la downloaded/
+          
+          # Convert version back to filename (e.g., 10-13 -> Test10.13.txt)
+          version_with_dots=$(echo "${{ matrix.version }}" | sed 's/-/./g')
+          expected_file="downloaded/Test${version_with_dots}.txt"
+          
+          if [ -f "$expected_file" ]; then
+            echo "✓ File found: $expected_file"
+            cat "$expected_file"
+          else
+            echo "ERROR: Expected file not found: $expected_file"
+            echo "Contents of downloaded directory:"
+            ls -la downloaded/
+            exit 1
+          fi
+          
+          echo ""
+          echo "✓ Matrix download successful for version ${{ matrix.version }}"

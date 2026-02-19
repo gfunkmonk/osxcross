@@ -1,0 +1,58 @@
+---
+name: Pre-build osxcross
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: macOS SDK Version
+        type: choice
+        options:
+          - 10.9
+          - 10.10
+          - 10.11
+          - 10.12
+          - 10.13
+          - 10.14
+          - 10.15
+          - 11.1
+          - 11.13
+          - 12.0
+          - 12.1
+          - 12.3
+          - 13.0
+          - 13.1
+          - 13.3
+          - 14.0
+          - 14.2
+          - 14.4
+          - 14.5
+          - 15.0
+          - 15.1
+          - 15.2
+          - 15.4
+          - 15.5
+          - 26.0
+          - 26.1
+        default: 10.13
+jobs:
+  build-linux-x86-64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v6
+      - name: download SDK
+        run: |
+          wget -P tarballs https://github.com/joseluisq/macosx-sdks/releases/download/${{ inputs.version }}/MacOSX${{ inputs.version }}.sdk.tar.xz
+      - name: build osxcross
+        run: |
+          UNATTENDED=1 TARGET_DIR=${{ github.workspace }}/osxcross ./build.sh         
+      - name: archive osxcross
+        run: |
+          tar -cvf osxcross.tar osxcross
+          xz -9 osxcross.tar          
+      - name: upload artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: osxcross-linux-x86-64
+          path: osxcross.tar.xz
+          compression-level: 0

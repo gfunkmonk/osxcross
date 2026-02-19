@@ -19,7 +19,7 @@ mkdir -p $BUILD_DIR
 source $BASE_DIR/tools/trap_exit.sh
 
 if [ -z "$CLANG_VERSION" ]; then
-  CLANG_VERSION=20.1.8
+  CLANG_VERSION=21.1.8
 fi
 
 if [ -z "$INSTALLPREFIX" ]; then
@@ -190,7 +190,7 @@ function build()
     -DCMAKE_INSTALL_PREFIX=$INSTALLPREFIX \
     -DCMAKE_BUILD_TYPE=Release \
     -DLLVM_ENABLE_ASSERTIONS=OFF \
-    -DLLVM_ENABLE_PROJECTS="clang" \
+    -DLLVM_ENABLE_PROJECTS="clang;lld" \
     -DLLVM_TARGETS_TO_BUILD="X86;AArch64;ARM" \
     -DLLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN=1
   $MAKE $2 -j $JOBS

@@ -42,7 +42,7 @@ jobs:
           mv *.sdk.tar.xz sdk-${{ matrix.macos_versions }}
       - name: Upload SDK
         id: upload_sdk
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: sdk-${{ matrix.macos_versions }}
           path: sdk-${{ matrix.macos_versions }}

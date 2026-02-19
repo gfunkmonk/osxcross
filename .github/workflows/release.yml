@@ -153,6 +153,12 @@ jobs:
             --workdir /osxcross \
             ubuntu:${{ matrix.ubuntu_version }} \
             ccache -s && /bin/bash -c "/osxcross/build_apple_clang_script.sh '${{ matrix.ubuntu_version }}'"
+      - name: Save Apple Clang build cache
+        uses: actions/cache/save@v4
+        if: always() && steps.cache-apple-clang.outputs.cache-hit != 'true'
+        with:
+          path: dist/
+          key: ${{ steps.cache-apple-clang.outputs.cache-primary-key }}
       - name: Upload Apple Clang artifact
         uses: actions/upload-artifact@v4
         with:
@@ -221,6 +227,14 @@ jobs:
         with:
           name: apple-clang-${{ matrix.ubuntu_version }}-${{ matrix.runs-on == 'ubuntu-24.04-arm' && 'aarch64' || 'x86_64' }}
           path: apple-clang
+      - name: Cache osxcross build
+        id: cache-osxcross
+        uses: actions/cache/restore@v4
+        with:
+          path: dist/
+          key: osxcross-ubuntu-${{ matrix.ubuntu_version }}-${{ matrix.runs-on }}-${{ hashFiles('build.sh', '.github/workflows/release.yml') }}
+          restore-keys: |
+            osxcross-ubuntu-${{ matrix.ubuntu_version }}-${{ matrix.runs-on }}
       - name: Create build script
         run: |
           cat > build_script.sh << 'EOF'
@@ -289,6 +303,7 @@ jobs:
           EOF
           chmod +x build_script.sh
       - name: Build osxcross
+        if: steps.cache-osxcross.outputs.cache-hit != 'true'
         run: |
           docker run --rm \
             --volume "${PWD}:/osxcross" \
@@ -298,12 +313,12 @@ jobs:
             --workdir /osxcross \
             ubuntu:${{ matrix.ubuntu_version }} \
             ccache -s && /bin/bash -c "/osxcross/build_script.sh '${{ matrix.ubuntu_version }}' '${{ matrix.sdk_versions }}'"
-      - name: Save Apple Clang build cache
+      - name: Save osxcross build cache
         uses: actions/cache/save@v4
-        if: always() && steps.cache-apple-clang.outputs.cache-hit != 'true'
+        if: always() && steps.cache-osxcross.outputs.cache-hit != 'true'
         with:
           path: dist/
-          key: ${{ steps.cache-apple-clang.outputs.cache-primary-key }}
+          key: ${{ steps.cache-osxcross.outputs.cache-primary-key }}
       - name: Release
         uses: softprops/action-gh-release@v2
         with:

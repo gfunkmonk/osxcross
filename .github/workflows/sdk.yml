@@ -47,10 +47,10 @@ jobs:
           mv *.sdk.tar.xz sdk-${{ matrix.macos_versions }}
       - name: Save SDK cache
         uses: actions/cache/save@v4
-        if: always() && steps.cache-sdk-package.outputs.cache-hit != 'true'
+        if: always() && steps.cache-sdk-packages.outputs.cache-hit != 'true'
         with:
           path: sdk-${{ matrix.macos_versions }}
-          key: ${{ steps.cache-sdk-package.outputs.cache-primary-key }}
+          key: ${{ steps.cache-sdk-packages.outputs.cache-primary-key }}
       - name: Upload SDK
         id: upload_sdk
         uses: actions/upload-artifact@v4

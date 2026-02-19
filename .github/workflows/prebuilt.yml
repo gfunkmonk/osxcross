@@ -1,12 +1,13 @@
 ---
 name: Pre-build osxcross
-on workflow_dispatch:
-  inputs:
-    version:
-      description: macOS Version for SDK
-      required: true
-      type: string
-      default: "10.13"
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: macOS Version for SDK
+        required: true
+        type: string
+        default: "10.13"
 jobs:
   build-linux-x86-64:
     runs-on: ubuntu-latest
@@ -15,9 +16,8 @@ jobs:
         uses: actions/checkout@v6
       - name: build and archive
         run: |
-          wget -P tarballs
-          https://github.com/joseluisq/macosx-sdks/releases/download/${{inputs.version }}/MacOSX${{ inputs.version }}.sdk.tar.xz
-          UNATTENDED=1 TARGET_DIR=${{github.workspace}}/osxcross ./build.sh
+          wget -P tarballs https://github.com/joseluisq/macosx-sdks/releases/download/${{ inputs.version }}/MacOSX${{ inputs.version }}.sdk.tar.xz
+          UNATTENDED=1 TARGET_DIR=${{ github.workspace }}/osxcross ./build.sh
           tar -cvf osxcross.tar osxcross
           xz -9 osxcross.tar
       - name: post artifacts

@@ -7,12 +7,6 @@ on:
         description: macOS SDK Version
         type: choice
         options:
-          - 10.1.5
-          - 10.2.8
-          - 10.3.0
-          - 10.3.9
-          - 10.4u
-          - 10.5
           - 10.6
           - 10.7
           - 10.8

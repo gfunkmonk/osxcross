@@ -63,8 +63,7 @@ jobs:
           mkdir -p /cmake
           if [ "$(uname -m)" = "x86_64" ] || [ "$(uname -m)" = "amd64" ]; then
             curl -sSL https://github.com/Kitware/CMake/releases/download/v3.31.8/cmake-3.31.8-linux-x86_64.tar.gz | tar -xz -C /cmake --strip-components=1
-          elif [ "$(uname -m)" = "aarch64" ] || [ "$(uname -m)" = "arm64" ];
-          then
+          elif [ "$(uname -m)" = "aarch64" ] || [ "$(uname -m)" = "arm64" ]; then
             curl -sSL https://github.com/Kitware/CMake/releases/download/v3.31.8/cmake-3.31.8-linux-aarch64.tar.gz | tar -xz -C /cmake --strip-components=1
           else
             echo "Unsupported architecture: $(uname -m)"
@@ -73,13 +72,13 @@ jobs:
           export PATH=/cmake/bin:$PATH
           # Build Apple Clang
           export INSTALLPREFIX=/usr/local/apple-clang
-          CLANG_VERSION=21 UNATTENDED=1 ENABLE_CLANG_INSTALL=1 PORTABLE=1 JOBS=$(nproc) bash build_apple_clang.sh
+          export CLANG_VERSION=21
+          UNATTENDED=1 ENABLE_CLANG_INSTALL=1 PORTABLE=1 JOBS=$(nproc) bash build_apple_clang.sh
           # Create distribution package
           mkdir -p dist
           if [ "$(uname -m)" = "x86_64" ] || [ "$(uname -m)" = "amd64" ]; then
             tar -zcf dist/apple-clang-21-linux-x86_64-gnu-ubuntu-$1.tar.gz -C $INSTALLPREFIX .
-          elif [ "$(uname -m)" = "aarch64" ] || [ "$(uname -m)" = "arm64" ];
-          then
+          elif [ "$(uname -m)" = "aarch64" ] || [ "$(uname -m)" = "arm64" ]; then
             tar -zcf dist/apple-clang-21-linux-aarch64-gnu-ubuntu-$1.tar.gz -C $INSTALLPREFIX .
           else
             echo "Unsupported architecture: $(uname -m)"
@@ -98,9 +97,7 @@ jobs:
       - name: Upload Apple Clang artifact
         uses: actions/upload-artifact@v6
         with:
-          name: >-
-            apple-clang-${{ matrix.ubuntu_version }}-${{ matrix.runs-on ==
-            'ubuntu-24.04-arm' && 'aarch64' || 'x86_64' }}
+          name: apple-clang-${{ matrix.ubuntu_version }}-${{ matrix.runs-on == 'ubuntu-24.04-arm' && 'aarch64' || 'x86_64' }}
           path: dist/*
       - name: Release
         uses: softprops/action-gh-release@v2
@@ -163,9 +160,7 @@ jobs:
       - name: Download Apple Clang
         uses: actions/download-artifact@v4
         with:
-          name: >-
-            apple-clang-${{ matrix.ubuntu_version }}-${{ matrix.runs-on ==
-            'ubuntu-24.04-arm' && 'aarch64' || 'x86_64' }}
+          name: apple-clang-${{ matrix.ubuntu_version }}-${{ matrix.runs-on == 'ubuntu-24.04-arm' && 'aarch64' || 'x86_64' }}
           path: apple-clang
       - name: Create build script
         run: |
@@ -209,8 +204,7 @@ jobs:
           mkdir -p /cmake
           if [ "$(uname -m)" = "x86_64" ] || [ "$(uname -m)" = "amd64" ]; then
             curl -sSL https://github.com/Kitware/CMake/releases/download/v3.31.8/cmake-3.31.8-linux-x86_64.tar.gz | tar -xz -C /cmake --strip-components=1
-          elif [ "$(uname -m)" = "aarch64" ] || [ "$(uname -m)" = "arm64" ];
-          then
+          elif [ "$(uname -m)" = "aarch64" ] || [ "$(uname -m)" = "arm64" ]; then
             curl -sSL https://github.com/Kitware/CMake/releases/download/v3.31.8/cmake-3.31.8-linux-aarch64.tar.gz | tar -xz -C /cmake --strip-components=1
           else
             echo "Unsupported architecture: $(uname -m)"
@@ -218,13 +212,13 @@ jobs:
           fi
           export PATH=/cmake/bin:$PATH
           # Build osxcross
-          export IPHONEOS_DEPLOYMENT_TARGET=5.0 UNATTENDED=1 SDK_VERSION="$(echo $2 | sed 's/-/./g')" JOBS=$(nproc) bash build.sh
+          export IPHONEOS_DEPLOYMENT_TARGET=5.0
+          UNATTENDED=1 SDK_VERSION="$(echo $2 | sed 's/-/./g')" JOBS=$(nproc) bash build.sh
           # Create distribution package
           mkdir -p dist
           if [ "$(uname -m)" = "x86_64" ] || [ "$(uname -m)" = "amd64" ]; then
             tar -zcf dist/osxcross-$2-linux-x86_64-gnu-ubuntu-$1.tar.gz -C $TARGET_DIR .
-          elif [ "$(uname -m)" = "aarch64" ] || [ "$(uname -m)" = "arm64" ];
-          then
+          elif [ "$(uname -m)" = "aarch64" ] || [ "$(uname -m)" = "arm64" ]; then
             tar -zcf dist/osxcross-$2-linux-aarch64-gnu-ubuntu-$1.tar.gz -C $TARGET_DIR .
           else
             echo "Unsupported architecture: $(uname -m)"
@@ -247,3 +241,4 @@ jobs:
           append_body: false
           fail_on_unmatched_files: true
           files: |
+            dist/*

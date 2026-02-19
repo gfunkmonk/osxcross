@@ -36,7 +36,7 @@ jobs:
           mv *.sdk.tar.xz sdk-${{ matrix.macos_versions }}
       - name: Upload SDK
         id: upload_sdk
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v6
         with:
           name: sdk-${{ matrix.macos_versions }}
           path: sdk-${{ matrix.macos_versions }}
@@ -76,7 +76,7 @@ jobs:
           ls -la *.sdk.tar.xz 2>/dev/null || echo "No SDK files found"
 
       - name: Upload SDK artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v6
         with:
           name: sdk-files-collected
           path: MacOSX*.sdk.tar.xz

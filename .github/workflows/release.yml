@@ -89,7 +89,7 @@ jobs:
             ubuntu:${{ matrix.ubuntu_version }} \
             /bin/bash -c "/osxcross/build_apple_clang_script.sh '${{ matrix.ubuntu_version }}'"
       - name: Upload Apple Clang artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v6
         with:
           name: apple-clang-${{ matrix.ubuntu_version }}-${{ matrix.runs-on == 'ubuntu-24.04-arm' && 'aarch64' || 'x86_64' }}
           path: dist/*

@@ -75,22 +75,6 @@ jobs:
           # List SDK files for verification
           ls -la *.sdk.tar.xz 2>/dev/null || echo "No SDK files found"
 
-          # Create individual artifact uploads for each SDK
-          for file in MacOSX*.sdk.tar.xz; do
-            if [ -f "$file" ]; then
-              # Extract version (MacOSX10.13.sdk.tar.xz -> 10-13)
-              name=$(echo "$file" | sed 's/\.sdk\.tar\.xz$//')
-              name=$(echo "$name" | sed 's/\./-/g')
-              artifact_name=$(echo "$name" | sed 's/^MacOSX-*//')
-              if [ -n "$artifact_name" ]; then
-                echo "Will upload $file as artifact: $artifact_name"
-                # Create a directory for this artifact
-                mkdir -p "sdk-individual/$artifact_name"
-                cp "$file" "sdk-individual/$artifact_name/"
-              fi
-            fi
-          done
-
       - name: Get all SDK Versions
         id: get_all_sdk_versions
         uses: actions/github-script@v7
@@ -114,34 +98,25 @@ jobs:
           script: |
             const fs = require('fs');
             const { DefaultArtifactClient } = require('@actions/artifact');
-            const path = require('path');
+            const artifact = new DefaultArtifactClient();
 
-            const artifactClient = new DefaultArtifactClient();
-
-            // Find all SDK individual directories
-            const sdkIndividualDir = 'sdk-individual';
-            if (!fs.existsSync(sdkIndividualDir)) {
-              throw new Error('sdk-individual directory not found');
-            }
-
-            const dirs = fs.readdirSync(sdkIndividualDir).filter(name =>
-              fs.statSync(path.join(sdkIndividualDir, name)).isDirectory()
+            const files = fs.readdirSync('.').filter(file =>
+              file.endsWith('.sdk.tar.xz') && file.startsWith('MacOSX')
             );
 
-            for (const sdk_version of dirs) {
-              const dirPath = path.join(sdkIndividualDir, sdk_version);
-              const files = fs.readdirSync(dirPath).filter(f => f.endsWith('.sdk.tar.xz'));
+            for (const file of files) {
+              // Convert MacOSX10.13.sdk.tar.xz to 10-13
+              const sdkVersion = file
+                .replace(/\.sdk\.tar\.xz$/, '')
+                .replace(/^MacOSX/, '')
+                .replace(/\./g, '-');
 
-              if (files.length > 0) {
-                const filePath = path.join(dirPath, files[0]);
-                console.log(`Uploading ${filePath} as artifact ${sdk_version}`);
+              console.log(`Uploading ${file} as artifact ${sdkVersion}`);
 
-                const uploadResult = await artifactClient.uploadArtifact(
-                  sdk_version,
-                  [filePath],
-                  '.',
-                  { continueOnError: false }
-                );
-
-                console.log(`Successfully uploaded artifact ${sdk_version}`);
-              }
+              await artifact.uploadArtifact(
+                sdkVersion,
+                [file],
+                '.',
+                { compressionLevel: 0 }
+              );
+            }

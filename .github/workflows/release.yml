@@ -71,8 +71,9 @@ jobs:
           fi
           export PATH=/cmake/bin:$PATH
           # Build Apple Clang
-          export INSTALLPREFIX=/usr/local/apple-clang
-          export CLANG_VERSION=21
+          export INSTALLPREFIX="/usr/local/apple-clang"
+          export CLANG_VERSION="21"
+
           UNATTENDED=1 ENABLE_CLANG_INSTALL=1 PORTABLE=1 JOBS=$(nproc) bash ./build_apple_clang.sh
           # Create distribution package
           mkdir -p dist
@@ -242,3 +243,5 @@ jobs:
           fail_on_unmatched_files: true
           files: |
             dist/*
+
+

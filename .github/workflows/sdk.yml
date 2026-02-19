@@ -8,7 +8,6 @@ on:
       SDK_VERSIONS:
         description: "List of SDK versions"
         value: ${{ jobs.collect_sdks.outputs.SDK_VERSIONS }}
-
 jobs:
   package_sdk:
     name: Package SDK
@@ -22,14 +21,12 @@ jobs:
     runs-on: macos-${{ matrix.macos_versions }}
     steps:
       - uses: actions/checkout@v6
-
       - name: Cache SDK packages
         id: cache-sdk-packages
         uses: actions/cache@v4
         with:
           path: sdk-${{ matrix.macos_versions }}
           key: sdk-packages-macos-${{ matrix.macos_versions }}-${{ hashFiles('tools/gen_sdk_package.sh') }}-v1
-
       - name: SDK Package
         if: steps.cache-sdk-packages.outputs.cache-hit != 'true'
         run: |
@@ -50,7 +47,6 @@ jobs:
           name: sdk-${{ matrix.macos_versions }}
           path: sdk-${{ matrix.macos_versions }}
           compression-level: 0
-
   collect_sdks:
     name: Collect SDKs
     runs-on: ubuntu-latest
@@ -64,7 +60,6 @@ jobs:
         with:
           pattern: 'sdk-*'
           merge-multiple: false
-
       - name: Collect SDKs
         shell: bash
         run: |
@@ -81,10 +76,8 @@ jobs:
               done
             fi
           done
-
           # List SDK files for verification
           ls -la *.sdk.tar.xz 2>/dev/null || echo "No SDK files found"
-
       - name: List SDK files
         id: list_sdk_files
         uses: actions/github-script@v7
@@ -96,7 +89,6 @@ jobs:
             );
             console.log('SDK files:', files);
             return files;
-
       - name: Get all SDK Versions
         id: get_all_sdk_versions
         uses: actions/github-script@v7
@@ -113,14 +105,12 @@ jobs:
             }).filter(name => name && name !== '');
             console.log('SDK versions:', sdk_versions);
             return sdk_versions;
-
       - name: Upload all SDKs as single artifact
         uses: actions/upload-artifact@v4
         with:
           name: all-sdks
           path: '*.sdk.tar.xz'
           compression-level: 0
-
   upload_individual_sdks:
     name: Upload SDK ${{ matrix.sdk_version }}
     runs-on: ubuntu-latest
@@ -138,14 +128,12 @@ jobs:
         with:
           name: all-sdks
           path: sdks
-
       - name: Prepare SDK for upload
         shell: bash
         run: |
           # Convert version back to filename (e.g., 10-13 -> MacOSX10.13.sdk.tar.xz)
           version_with_dots=$(echo "${{ matrix.sdk_version }}" | sed 's/-/./g')
           sdk_file="sdks/MacOSX${version_with_dots}.sdk.tar.xz"
-
           if [ -f "$sdk_file" ]; then
             echo "Found SDK file: $sdk_file"
             # Copy to a predictable location for the upload action
@@ -158,7 +146,6 @@ jobs:
             ls -la sdks/
             exit 1
           fi
-
       - name: Upload SDK artifact
         uses: actions/upload-artifact@v4
         with:

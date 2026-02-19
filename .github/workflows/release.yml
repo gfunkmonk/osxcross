@@ -213,7 +213,7 @@ jobs:
           export PATH=/cmake/bin:$PATH
           # Build osxcross
           export IPHONEOS_DEPLOYMENT_TARGET=5.0
-          UNATTENDED=1 SDK_VERSION="$(echo $2 | sed 's/-/./g')" JOBS=$(nproc) bash build.sh
+          UNATTENDED=1 SDK_VERSION="$(echo $2 | sed 's/-/./g')" JOBS=$(nproc) bash ./build.sh
           # Create distribution package
           mkdir -p dist
           if [ "$(uname -m)" = "x86_64" ] || [ "$(uname -m)" = "amd64" ]; then

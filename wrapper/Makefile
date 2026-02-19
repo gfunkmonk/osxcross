@@ -9,7 +9,7 @@ LINKER_VERSION ?= 134.9
 LIBLTO_PATH ?=
 ADDITIONAL_CXXFLAGS ?=
 
-override CXXFLAGS=-std=c++0x -Wall -Wextra
+override CXXFLAGS=-std=c++11 -Wall -Wextra
 override CXXFLAGS+=-Wno-missing-field-initializers
 override CXXFLAGS+=-I. -O$(OPTIMIZE)
 
@@ -41,7 +41,7 @@ else ifneq (,$(findstring Darwin, $(PLATFORM)))
   override CXXFLAGS+=-Wno-deprecated
   override LDFLAGS+=-framework CoreServices -Wno-deprecated
 else ifneq (,$(findstring CYGWIN, $(PLATFORM)))
-  # -std=gnu++0x doesn't work, so work around...
+  # -std=gnu++11 doesn't work, so work around...
   override CXXFLAGS+=-U__STRICT_ANSI__
 else
 

@@ -49,9 +49,9 @@ function compress()
 {
   case $SDK_COMPRESSOR in
     "zip")
-      $SDK_COMPRESSOR -q -5 -r - $1 > $2 ;;
+      $SDK_COMPRESSOR -q -6 -r - $1 > $2 ;;
     *)
-      tar cf - $1 | $SDK_COMPRESSOR -5 - > $2 ;;
+      tar cf - $1 | $SDK_COMPRESSOR -6 - > $2 ;;
   esac
 }
 
@@ -226,7 +226,7 @@ for SDK in "${SDKS[@]}"; do
     continue
   fi
 
-  TMP=$(mktemp -d /tmp/XXXXXXXXXXX)
+  TMP=$(mktemp -d)
   cp -r $(rreadlink $SDK) $TMP/$SDK &>/dev/null || true
 
   pushd "$XCODEDIR" &>/dev/null

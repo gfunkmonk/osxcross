@@ -158,7 +158,7 @@ fi
 $MAKE -j$JOBS
 $MAKE install
 
-GCC_VERSION=`echo $GCC_VERSION | tr '-' ' ' |  awk '{print $1}'`
+GCC_VERSION=$(echo $GCC_VERSION | tr '-' ' ' |  awk '{print $1}')
 
 pushd $TARGET_DIR/x86_64-apple-$TARGET/include &>/dev/null
 pushd c++/${GCC_VERSION}* &>/dev/null

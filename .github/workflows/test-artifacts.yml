@@ -40,38 +40,40 @@ jobs:
             console.log('Test versions:', versions);
             return versions;
 
-      - name: Upload individual test artifacts
-        uses: actions/github-script@v7
+      - name: Upload test artifact for 10-13
+        uses: actions/upload-artifact@v4
         with:
-          script: |
-            const fs = require('fs');
-            const { DefaultArtifactClient } = require('@actions/artifact');
-            const artifact = new DefaultArtifactClient();
-            
-            const files = fs.readdirSync('.').filter(file =>
-              file.endsWith('.txt') && file.startsWith('Test')
-            );
-            
-            console.log(`Found ${files.length} test files to upload`);
-            
-            for (const file of files) {
-              // Convert Test10.13.txt to 10-13
-              const version = file
-                .replace(/\.txt$/, '')
-                .replace(/^Test/, '')
-                .replace(/\./g, '-');
-              
-              console.log(`Uploading ${file} as artifact ${version}`);
-              
-              await artifact.uploadArtifact(
-                version,
-                [file],
-                '.',
-                { compressionLevel: 0 }
-              );
-            }
-            
-            console.log('All test artifacts uploaded successfully!');
+          name: 10-13
+          path: Test10.13.txt
+          compression-level: 0
+
+      - name: Upload test artifact for 11-1
+        uses: actions/upload-artifact@v4
+        with:
+          name: 11-1
+          path: Test11.1.txt
+          compression-level: 0
+
+      - name: Upload test artifact for 12-0
+        uses: actions/upload-artifact@v4
+        with:
+          name: 12-0
+          path: Test12.0.txt
+          compression-level: 0
+
+      - name: Upload test artifact for 13-3
+        uses: actions/upload-artifact@v4
+        with:
+          name: 13-3
+          path: Test13.3.txt
+          compression-level: 0
+
+      - name: Upload test artifact for 14-5
+        uses: actions/upload-artifact@v4
+        with:
+          name: 14-5
+          path: Test14.5.txt
+          compression-level: 0
 
   download_test_artifacts:
     name: Download Test Artifacts
@@ -79,7 +81,7 @@ jobs:
     needs: upload_test_artifacts
     steps:
       - name: Download test artifacts using pattern
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v4
         with:
           pattern: '[0-9]*'
           path: downloaded
@@ -153,7 +155,7 @@ jobs:
         version: ${{ fromJSON(needs.upload_test_artifacts.outputs.TEST_VERSIONS) }}
     steps:
       - name: Download specific version artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v4
         with:
           name: ${{ matrix.version }}
           path: downloaded

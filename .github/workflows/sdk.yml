@@ -17,7 +17,7 @@ jobs:
         macos_versions:
           - 14
           - 15
-          - 26
+          #- 26
     runs-on: macos-${{ matrix.macos_versions }}
     steps:
       - uses: actions/checkout@v4
@@ -34,7 +34,6 @@ jobs:
           done
           mkdir -p sdk-${{ matrix.macos_versions }}
           mv *.sdk.tar.xz sdk-${{ matrix.macos_versions }}
-          
       - name: Upload SDK
         id: upload_sdk
         uses: actions/upload-artifact@v4
@@ -50,139 +49,79 @@ jobs:
     outputs:
       SDK_VERSIONS: ${{ steps.get_all_sdk_versions.outputs.result }}
     steps:
-      - name: Download all SDK artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: sdk-*
-          path: downloaded-sdks
-          
-      - name: Collect and re-upload SDKs
+      - name: Collect SDK
+        id: collect_sdk
         uses: actions/github-script@v7
         with:
           script: |
-            const fs = require('fs');
-            const path = require('path');
             const { execSync } = require('child_process');
-            
-            // Collect all SDK files from downloaded artifacts
-            const downloadedPath = 'downloaded-sdks';
-            const sdkFolders = fs.readdirSync(downloadedPath);
-            
+            execSync('npm install @actions/artifact@1.1.2');
+            const { DefaultArtifactClient } = require('@actions/artifact');
+            const artifact = new DefaultArtifactClient();
+            const fs = require('fs');
+            const allArtifacts = await artifact.listArtifacts();
+            const sdkArtifacts = allArtifacts.artifacts.filter(a => a.name.startsWith('sdk-'));
+            for (const sdkArtifact of sdkArtifacts) {
+              console.log('download', sdkArtifact);
+              await artifact.downloadArtifact(sdkArtifact.id, {
+                path: sdkArtifact.name
+              });
+            }
+            const sdkFolders = fs.readdirSync('.').filter(folder => folder.startsWith('sdk-'));
             for (const folder of sdkFolders) {
-              const folderPath = path.join(downloadedPath, folder);
-              const sdkFiles = fs.readdirSync(folderPath).filter(file => file.endsWith('.sdk.tar.xz'));
-              
+              const sdkFiles = fs.readdirSync(folder).filter(file => file.endsWith('.sdk.tar.xz'));
               for (const file of sdkFiles) {
-                const sourcePath = path.join(folderPath, file);
-                console.log(`Processing ${sourcePath}`);
-                
-                // Move file to root for re-upload
+                const sourcePath = `${folder}/${file}`;
+                console.log(`collect ${sourcePath}`);
                 fs.renameSync(sourcePath, file);
               }
             }
-            
-            // Get list of SDK files to upload individually
-            const files = fs.readdirSync('.').filter(file => 
-              file.endsWith('.sdk.tar.xz') && file.startsWith('MacOSX')
-            );
-            
-            console.log('Found SDK files:', files);
-            
-            // Create a marker file with the list
-            fs.writeFileSync('sdk-files.txt', files.join('\n'));
-            
-      - name: Upload individual SDKs
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const { execSync } = require('child_process');
-            
-            // Read the list of SDK files
-            const files = fs.readFileSync('sdk-files.txt', 'utf8').split('\n').filter(Boolean);
-            
+            const files = fs.readdirSync('.');
             for (const file of files) {
-              if (!fs.existsSync(file)) {
-                console.log(`Skipping ${file} - not found`);
+              if (!file.endsWith('.sdk.tar.xz') || (!file.startsWith('MacOSX'))) {
                 continue;
               }
-              
-              const name = file
-                .replace(/\.sdk\.tar\.xz$/, '')
-                .replace('.', '-')
-                .replace(/^MacOSX/, '');
-              
-              if (name === '' || name === 'MacOSX') {
-                console.log(`Skipping ${file} - invalid name`);
+              const name = file.replace(/\.sdk\.tar\.xz$/, '').replace('.', '-');
+              if (name === 'MacOSX') {
                 continue;
               }
-              
-              console.log(`Uploading ${file} as artifact ${name}`);
-              
-              // Use gh CLI to upload artifact (more reliable than programmatic API)
-              try {
-                execSync(`echo "Artifact ${name} prepared for upload"`);
-                
-                // Create temp directory for this artifact
-                const artifactDir = `artifact-${name}`;
-                fs.mkdirSync(artifactDir, { recursive: true });
-                fs.copyFileSync(file, `${artifactDir}/${file}`);
-                
-                // Note: Actual upload will be done in next step using upload-artifact action
-                fs.appendFileSync('upload-list.txt', `${name}:${artifactDir}/${file}\n`);
-              } catch (error) {
-                console.error(`Failed to prepare ${name}: ${error.message}`);
+              const maxRetries = 3;
+              let retries = 0;
+              let success = false;
+              while (retries < maxRetries && !success) {
+                try {
+                  await artifact.uploadArtifact(
+                    name.replace(/^MacOSX/, ''),
+                    [file],
+                    '.',
+                    {
+                      compressionLevel: 0
+                    }
+                  );
+                  success = true;
+                } catch (error) {
+                  console.error(`upload ${name} failed, retry ${retries + 1}, error: ${error.message}`);
+                  retries++;
+                  if (retries < maxRetries) {
+                    try {
+                      await artifact.deleteArtifact(name);
+                    } catch (deleteError) {}
+                  }
+                }
+              }
+              if (!success) {
+                throw new Error(`upload ${name} failed`);
               }
             }
-            
-      - name: Upload SDK artifacts
-        run: |
-          # Read upload list and upload each SDK
-          if [ -f upload-list.txt ]; then
-            while IFS=: read -r name filepath; do
-              if [ -f "$filepath" ]; then
-                echo "Uploading $name from $filepath"
-                # Extract just the directory for the upload action
-                dir=$(dirname "$filepath")
-                mkdir -p "upload-$name"
-                cp "$filepath" "upload-$name/"
-              fi
-            done < upload-list.txt
-          fi
-          
-      - name: Upload each SDK as separate artifact
-        if: hashFiles('upload-*') != ''
-        shell: bash
-        run: |
-          for dir in upload-*; do
-            if [ -d "$dir" ]; then
-              name="${dir#upload-}"
-              echo "Uploading artifact: $name from $dir"
-            fi
-          done
-          
-      # Alternative: Use a matrix strategy to upload artifacts
-      - name: Prepare artifact list
-        id: prepare_artifacts
-        run: |
-          if [ -f upload-list.txt ]; then
-            echo "Found $(wc -l < upload-list.txt) artifacts to upload"
-            cat upload-list.txt
-          fi
-          
       - name: Get all SDK Versions
         id: get_all_sdk_versions
         uses: actions/github-script@v7
         with:
           script: |
-            const fs = require('fs');
-            
-            // Read SDK files list
-            const files = fs.readFileSync('sdk-files.txt', 'utf8').split('\n').filter(Boolean);
-            
-            const sdk_versions = files
-              .map(file => file.replace(/\.sdk\.tar\.xz$/, '').replace('.', '-').replace(/^MacOSX/, ''))
-              .filter(name => name !== '' && name !== 'MacOSX' && !name.startsWith('sdk-') && !name.startsWith('apple-clang-'));
-            
-            console.log('SDK versions:', sdk_versions);
+            const { execSync } = require('child_process');
+            execSync('npm install @actions/artifact@1.1.2');
+            const { DefaultArtifactClient } = require('@actions/artifact');
+            const artifact = new DefaultArtifactClient();
+            const sdks = await artifact.listArtifacts();
+            const sdk_versions = sdks.artifacts.map(sdk => sdk.name).filter(name => !name.startsWith('sdk-') && !name.startsWith('apple-clang-'));
             return sdk_versions;

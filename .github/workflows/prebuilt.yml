@@ -16,8 +16,7 @@ jobs:
       - name: build and archive
         run: |
           wget -P tarballs
-          https://github.com/joseluisq/macosx-sdks/releases/download/${{
-          inputs.version }}/MacOSX${{ inputs.version }}.sdk.tar.xz
+          https://github.com/joseluisq/macosx-sdks/releases/download/${{inputs.version }}/MacOSX${{ inputs.version }}.sdk.tar.xz
           UNATTENDED=1 TARGET_DIR=${{github.workspace}}/osxcross ./build.sh
           tar -cvf osxcross.tar osxcross
           xz -9 osxcross.tar

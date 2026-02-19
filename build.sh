@@ -28,7 +28,7 @@ case $SDK_VERSION in
 esac
 
 case $SDK_VERSION in
-  10.5*)   TARGET=darwin9;   SUPPORTED_ARCHS="powerpc i386"; NEED_TAPI_SUPPORT=0; OSX_VERSION_MIN_INT=10.5 ;;
+  10.5*)   TARGET=darwin9;   SUPPORTED_ARCHS="i386"; NEED_TAPI_SUPPORT=0; OSX_VERSION_MIN_INT=10.5;;
   10.6*)   TARGET=darwin10;   SUPPORTED_ARCHS="i386 x86_64"; NEED_TAPI_SUPPORT=0; OSX_VERSION_MIN_INT=10.6 ;;
   10.7*)   TARGET=darwin11;   SUPPORTED_ARCHS="i386 x86_64"; NEED_TAPI_SUPPORT=0; OSX_VERSION_MIN_INT=10.6 ;;
   10.8*)   TARGET=darwin12;   SUPPORTED_ARCHS="i386 x86_64 x86_64h"; NEED_TAPI_SUPPORT=0; OSX_VERSION_MIN_INT=10.6 ;;
@@ -205,10 +205,6 @@ fi
 if arch_supported arm64; then
   create_arch_symlinks "aarch64"
   create_arch_symlinks "arm64"
-fi
-
-if arch_supported arm64e; then
-  create_arch_symlinks "arm64e"
 fi
 
 # For unpatched dsymutil. There is currently no way around it.

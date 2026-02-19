@@ -29,6 +29,9 @@ jobs:
           key: sdk-packages-macos-${{ matrix.macos_versions }}-${{ hashFiles('tools/gen_sdk_package.sh') }}-v1
           restore-keys: |
             sdk-packages-macos-${{ matrix.macos_versions }}
+      - name: install homebrew packages
+        run: |
+          brew install pixz
       - name: SDK Package
         if: steps.cache-sdk-packages.outputs.cache-hit != 'true'
         run: |
@@ -38,7 +41,7 @@ jobs:
           ls /Applications | grep -E '^Xcode_[0-9]+(\.[0-9]+)*\.app$' | sort -rV
           for xcode in $(ls /Applications | grep -E '^Xcode_[0-9]+(\.[0-9]+)*\.app$' | sort -rV); do
             sed 's|for SDK in $SDKS; do|for SDK in $SDKS; do\n[ -f "$WDIR/$SDK$SDK_EXT" ] \&\& continue|g' tools/gen_sdk_package.sh | \
-            XCODEDIR=/Applications/$xcode SDK_COMPRESSOR=xz bash
+            XCODEDIR=/Applications/$xcode SDK_COMPRESSOR=pixz bash
           done
           mkdir -p sdk-${{ matrix.macos_versions }}
           mv *.sdk.tar.xz sdk-${{ matrix.macos_versions }}

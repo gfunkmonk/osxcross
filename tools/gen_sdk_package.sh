@@ -15,11 +15,12 @@ fi
 
 
 if [ -z "$SDK_COMPRESSOR" ]; then
-  command -v xz &>/dev/null
-
-  if [ $? -eq 0 ]; then
+  if command -v xz &>/dev/null; then
+    SDK_COMPRESSOR=pixz
+    SDK_EXT="tar.xz
+  elif command -v xz &>/dev/null; then
     SDK_COMPRESSOR=xz
-    SDK_EXT="tar.xz"
+    SDK_EXT="tar.xz
   else
     SDK_COMPRESSOR=bzip2
     SDK_EXT="tar.bz2"
@@ -33,6 +34,9 @@ case $SDK_COMPRESSOR in
     ;;
   "bzip2")
     SDK_EXT=".tar.bz2"
+    ;;
+  "pixz")
+    SDK_EXT=".tar.xz"
     ;;
   "xz")
     SDK_EXT=".tar.xz"

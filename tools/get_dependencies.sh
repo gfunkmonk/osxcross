@@ -83,7 +83,7 @@ if [ -e /etc/issue ]; then
  else
   unknown
  fi
-elif [ "$(uname | grep -i freebsd )" ]; then
+elif [ "$(uname | grep -i freebsd)" ]; then
  get_freebsd_deps
 elif [ "$(uname | grep -i netbsd)" ]; then
  get_netbsd_deps

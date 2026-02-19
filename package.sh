@@ -11,34 +11,34 @@ else
   BINARYPACKAGE="0"
 fi
 
-TMPDIR=`mktemp -d /tmp/XXXXXXXXX`
+TMPDIR=$(mktemp -d)
 
-BASEDIR=`pwd`
+BASEDIR=$(pwd)
 
 set +e
-REVHASH=`git rev-parse --short HEAD`
+REVHASH=$(git rev-parse --short HEAD)
 set -e
 
-OSXCROSSVER=`cat build.sh | grep "OSXCROSS_VERSION" | head -n1 | tr '=' ' ' | awk '{print $2}'`
+OSXCROSSVER=$(cat build.sh | grep "OSXCROSS_VERSION" | head -n1 | tr '=' ' ' | awk '{print $2}')
 
-pushd $TMPDIR
+pushd "$TMPDIR"
 
 mkdir osxcross
 pushd osxcross
 
 if [ $BINARYPACKAGE != "1" ]; then
-  cp -r $BASEDIR/tarballs .
-  cp -r $BASEDIR/patches .
-  cp -r $BASEDIR/tools .
-  cp -r $BASEDIR/oclang .
-  cp -r $BASEDIR/wrapper .
+  cp -r "$BASEDIR/tarballs" .
+  cp -r "$BASEDIR/patches" .
+  cp -r "$BASEDIR/tools" .
+  cp -r "$BASEDIR/oclang" .
+  cp -r "$BASEDIR/wrapper" .
 else
-  ldd `ls $BASEDIR/target/bin/x86_64-apple-darwin*-ld | head -n1` | grep "libLTO.so" &>/dev/null && \
+  ldd $(ls $BASEDIR/target/bin/x86_64-apple-darwin*-ld | head -n1) | grep "libLTO.so" &>/dev/null && \
     echo "-->> WARNING: ld is linked dynamically against libLTO.so! Consider recompiling with DISABLE_LTO_SUPPORT=1 <<--" && \
     sleep 5
 
-  cp -r $BASEDIR/target/* .
-  cp $BASEDIR/build/cctools*/cctools/APPLE_LICENSE CCTOOLS.LICENSE
+  cp -r "$BASEDIR/target"/* .
+  cp "$BASEDIR/build/cctools"*/cctools/APPLE_LICENSE CCTOOLS.LICENSE
 
   READMEINSTALL="README_INSTALL"
 
@@ -55,7 +55,7 @@ else
   echo ""                                        >> $READMEINSTALL
 fi
 
-find $BASEDIR -maxdepth 1 -type f -exec cp {} . \;
+find "$BASEDIR" -maxdepth 1 -type f -exec cp {} . \;
 
 if [ $BINARYPACKAGE == "1" ]; then
   rm -f *.sh
@@ -76,8 +76,8 @@ rm -rf osxcross*.tar.*
 
 popd
 
-tar -cf - * | xz -$COMPRESSLEVEL -c - > $BASEDIR/osxcross-v${OSXCROSSVER}_${REVHASH}${SUFFIX}.tar.xz
+tar -cf - * | xz -$COMPRESSLEVEL -c - > "$BASEDIR/osxcross-v${OSXCROSSVER}_${REVHASH}${SUFFIX}.tar.xz"
 
 popd
 
-rm -rf $TMPDIR
+rm -rf "$TMPDIR"

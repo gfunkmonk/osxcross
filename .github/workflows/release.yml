@@ -118,9 +118,8 @@ jobs:
       - name: Download SDKs
         uses: actions/download-artifact@v4
         with:
-          pattern: '[0-9]*'
+          name: sdk-files-collected
           path: tarballs
-          merge-multiple: true
       - name: Release
         uses: softprops/action-gh-release@v2
         with:

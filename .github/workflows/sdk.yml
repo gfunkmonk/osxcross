@@ -48,14 +48,15 @@ jobs:
     needs: package_sdk
     outputs:
       SDK_VERSIONS: ${{ steps.get_all_sdk_versions.outputs.result }}
+      SDK_FILES: ${{ steps.list_sdk_files.outputs.result }}
     steps:
       - name: Download SDK artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v4
         with:
           pattern: 'sdk-*'
           merge-multiple: false
 
-      - name: Collect and upload SDKs
+      - name: Collect SDKs
         shell: bash
         run: |
           # Move SDK files from artifact folders to current directory
@@ -75,6 +76,18 @@ jobs:
           # List SDK files for verification
           ls -la *.sdk.tar.xz 2>/dev/null || echo "No SDK files found"
 
+      - name: List SDK files
+        id: list_sdk_files
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const files = fs.readdirSync('.').filter(file =>
+              file.endsWith('.sdk.tar.xz') && file.startsWith('MacOSX')
+            );
+            console.log('SDK files:', files);
+            return files;
+
       - name: Get all SDK Versions
         id: get_all_sdk_versions
         uses: actions/github-script@v7
@@ -92,31 +105,51 @@ jobs:
             console.log('SDK versions:', sdk_versions);
             return sdk_versions;
 
-      - name: Upload individual SDK artifacts
-        uses: actions/github-script@v7
+      - name: Upload all SDKs as single artifact
+        uses: actions/upload-artifact@v4
         with:
-          script: |
-            const fs = require('fs');
-            const { DefaultArtifactClient } = require('@actions/artifact');
-            const artifact = new DefaultArtifactClient();
+          name: all-sdks
+          path: '*.sdk.tar.xz'
+          compression-level: 0
 
-            const files = fs.readdirSync('.').filter(file =>
-              file.endsWith('.sdk.tar.xz') && file.startsWith('MacOSX')
-            );
+  upload_individual_sdks:
+    name: Upload SDK ${{ matrix.sdk_version }}
+    runs-on: ubuntu-latest
+    needs: collect_sdks
+    strategy:
+      fail-fast: false
+      matrix:
+        sdk_version: ${{ fromJSON(needs.collect_sdks.outputs.SDK_VERSIONS) }}
+    steps:
+      - name: Download all SDKs
+        uses: actions/download-artifact@v4
+        with:
+          name: all-sdks
+          path: sdks
 
-            for (const file of files) {
-              // Convert MacOSX10.13.sdk.tar.xz to 10-13
-              const sdkVersion = file
-                .replace(/\.sdk\.tar\.xz$/, '')
-                .replace(/^MacOSX/, '')
-                .replace(/\./g, '-');
+      - name: Prepare SDK for upload
+        shell: bash
+        run: |
+          # Convert version back to filename (e.g., 10-13 -> MacOSX10.13.sdk.tar.xz)
+          version_with_dots=$(echo "${{ matrix.sdk_version }}" | sed 's/-/./g')
+          sdk_file="sdks/MacOSX${version_with_dots}.sdk.tar.xz"
+          
+          if [ -f "$sdk_file" ]; then
+            echo "Found SDK file: $sdk_file"
+            # Copy to a predictable location for the upload action
+            mkdir -p upload
+            cp "$sdk_file" "upload/"
+            ls -la upload/
+          else
+            echo "ERROR: SDK file not found: $sdk_file"
+            echo "Available files:"
+            ls -la sdks/
+            exit 1
+          fi
 
-              console.log(`Uploading ${file} as artifact ${sdkVersion}`);
-
-              await artifact.uploadArtifact(
-                sdkVersion,
-                [file],
-                '.',
-                { compressionLevel: 0 }
-              );
-            }
+      - name: Upload SDK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.sdk_version }}
+          path: upload/*.sdk.tar.xz
+          compression-level: 0

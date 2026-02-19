@@ -117,9 +117,8 @@ jobs:
       - name: Download SDKs
         uses: actions/download-artifact@v7
         with:
-          pattern: '[0-9]*'
+          name: sdk-files-collected
           path: tarballs
-          merge-multiple: true
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
@@ -153,8 +152,32 @@ jobs:
       - name: Download SDK
         uses: actions/download-artifact@v7
         with:
-          name: ${{ matrix.sdk_versions }}
+          name: sdk-files-collected
           path: tarballs
+
+      - name: Filter SDK for this build
+        run: |
+          # Convert SDK version format from 10-13 to MacOSX10.13.sdk.tar.xz
+          SDK_VERSION="${{ matrix.sdk_versions }}"
+          SDK_FILE="MacOSX$(echo $SDK_VERSION | sed 's/-/./g').sdk.tar.xz"
+          echo "Looking for SDK file: $SDK_FILE"
+          
+          # Keep only the SDK file we need for this matrix build
+          if [ -f "tarballs/$SDK_FILE" ]; then
+            # Move the specific SDK file to a temp location
+            mv "tarballs/$SDK_FILE" "/tmp/$SDK_FILE"
+            # Remove all other SDK files
+            rm -f tarballs/*.sdk.tar.xz
+            # Move the specific SDK file back
+            mv "/tmp/$SDK_FILE" "tarballs/$SDK_FILE"
+            echo "Kept SDK file: $SDK_FILE"
+            ls -la tarballs/
+          else
+            echo "Error: SDK file $SDK_FILE not found!"
+            echo "Available files:"
+            ls -la tarballs/
+            exit 1
+          fi
 
       - name: Download Apple Clang
         uses: actions/download-artifact@v7

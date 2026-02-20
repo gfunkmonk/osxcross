@@ -1,7 +1,22 @@
 ---
 name: Release osxcross
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+    inputs:
+      freespace:
+        description: 'Clear Disk Space'
+        required: true
+        type: boolean
+        default: false
+      swapspace:
+        description: 'Add Swap File'
+        required: true
+        type: boolean
+        default: false
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   package_sdks:
     uses: ./.github/workflows/sdk.yml
@@ -14,6 +29,17 @@ jobs:
         runner: [ubuntu-latest, ubuntu-24.04-arm]
     runs-on: ${{ matrix.runner }}
     steps:
+      - if: ${{ inputs.freespace }}
+        name: Clear up some disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          swap-storage: true
+          large-packages: true
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          docker-images: true
       - uses: actions/checkout@v6
       - name: Cache Apple Clang build
         id: cache-apple-clang
@@ -23,6 +49,13 @@ jobs:
           key: apple-clang-21-ubuntu-${{ matrix.ubuntu_version }}-${{ matrix.runs-on }}-${{ hashFiles('build_apple_clang.sh', 'build_clang.sh', '.github/workflows/release.yml') }}
           restore-keys: |
             apple-clang-21-ubuntu-${{ matrix.ubuntu_version }}-${{ matrix.runs-on }}
+      - if: ${{ inputs.swapspace }}
+        name: Set up swap space
+        uses: thejerrybao/setup-swap-space@v1
+        with:
+          swap-space-path: /mnt/swapfile
+          swap-size-gb: 8
+          remove-existing-swap-files: true
       - name: Create Apple Clang build script
         if: steps.cache-apple-clang.outputs.cache-hit != 'true'
         run: |
@@ -137,6 +170,8 @@ jobs:
             direct_mode=true
             depend_mode=true
             compiler_check=content
+      #- name: 🔐 🄢🄢🄗 ⒱⒤⒜ 🄒⒧⒪⒰⒟⒡⒧⒜⒭⒠
+      #  uses: valeriangalliat/action-sshd-cloudflared@v1
       - name: Build Apple Clang
         if: steps.cache-apple-clang.outputs.cache-hit != 'true'
         run: |
@@ -292,6 +327,8 @@ jobs:
           fi
           EOF
           chmod +x build_script.sh
+      #- name: 🔐 🄢🄢🄗 ⒱⒤⒜ 🄒⒧⒪⒰⒟⒡⒧⒜⒭⒠
+      #  uses: valeriangalliat/action-sshd-cloudflared@v1
       - name: Build osxcross
         if: steps.cache-osxcross.outputs.cache-hit != 'true'
         run: |

@@ -60,6 +60,14 @@ jobs:
           haskell: true
           docker-images: true
       - uses: actions/checkout@v6
+      - name: Cache ccache
+        id: cache-ccache
+        uses: actions/cache/restore@v4
+        with:
+          path: /mnt/ccache
+          key: ccache-apple-clang-ubuntu-${{ matrix.ubuntu_version }}-${{ matrix.runs-on }}-${{ hashFiles('build_apple_clang.sh', 'build_clang.sh') }}
+          restore-keys: |
+            ccache-apple-clang-ubuntu-${{ matrix.ubuntu_version }}-${{ matrix.runs-on }}
       - name: Cache Apple Clang build
         id: cache-apple-clang
         uses: actions/cache/restore@v4
@@ -208,6 +216,12 @@ jobs:
         with:
           path: dist/
           key: ${{ steps.cache-apple-clang.outputs.cache-primary-key }}
+      - name: Save ccache
+        uses: actions/cache/save@v4
+        if: steps.cache-ccache.outputs.cache-hit != 'true'
+        with:
+          path: /mnt/ccache
+          key: ${{ steps.cache-ccache.outputs.cache-primary-key }}
       - name: Upload Apple Clang artifact
         uses: actions/upload-artifact@v4
         with:
@@ -272,6 +286,14 @@ jobs:
         with:
           name: apple-clang-${{ matrix.ubuntu_version }}-${{ matrix.runs-on == 'ubuntu-24.04-arm' && 'aarch64' || 'x86_64' }}
           path: apple-clang
+      - name: Cache ccache
+        id: cache-ccache-osxcross
+        uses: actions/cache/restore@v4
+        with:
+          path: /mnt/ccache
+          key: ccache-osxcross-ubuntu-${{ matrix.ubuntu_version }}-${{ matrix.runs-on }}-${{ hashFiles('build.sh') }}
+          restore-keys: |
+            ccache-osxcross-ubuntu-${{ matrix.ubuntu_version }}-${{ matrix.runs-on }}
       - name: Cache osxcross build
         id: cache-osxcross
         uses: actions/cache/restore@v4
@@ -366,6 +388,12 @@ jobs:
         with:
           path: dist/
           key: ${{ steps.cache-osxcross.outputs.cache-primary-key }}
+      - name: Save ccache
+        uses: actions/cache/save@v4
+        if: steps.cache-ccache-osxcross.outputs.cache-hit != 'true'
+        with:
+          path: /mnt/ccache
+          key: ${{ steps.cache-ccache-osxcross.outputs.cache-primary-key }}
       - name: Release
         uses: softprops/action-gh-release@v2
         with:

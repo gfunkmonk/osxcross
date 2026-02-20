@@ -37,7 +37,7 @@ popd &>/dev/null
 require dmg2img
 verbose_cmd "modprobe hfsplus"
 
-TMP=$(mktemp -d /tmp/XXXXXXXXX)
+TMP=$(mktemp -d)
 echo "tmp dir: $TMP"
 
 verbose_cmd "chmod 777 $TMP"

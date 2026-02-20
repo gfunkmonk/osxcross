@@ -1,0 +1,165 @@
+---
+name: SDK
+
+on:
+  workflow_dispatch:
+  workflow_call:
+    outputs:
+      SDK_VERSIONS:
+        description: "List of SDK versions"
+        value: ${{ jobs.collect_sdks.outputs.SDK_VERSIONS }}
+jobs:
+  package_sdk:
+    name: Package SDK
+    strategy:
+      fail-fast: false
+      matrix:
+        macos_versions:
+          - 14
+          - 15
+          - 26
+    runs-on: macos-${{ matrix.macos_versions }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Cache SDK packages
+        id: cache-sdk-packages
+        uses: actions/cache/restore@v4
+        with:
+          path: sdk-${{ matrix.macos_versions }}
+          key: sdk-packages-macos-${{ matrix.macos_versions }}-${{ hashFiles('tools/gen_sdk_package.sh') }}-v1
+          restore-keys: |
+            sdk-packages-macos-${{ matrix.macos_versions }}
+      - name: install homebrew packages
+        run: |
+          brew install pixz
+      - name: SDK Package
+        if: steps.cache-sdk-packages.outputs.cache-hit != 'true'
+        run: |
+          xcode-select -p
+          xcodebuild -version
+          xcodebuild -showsdks
+          ls /Applications | grep -E '^Xcode_[0-9]+(\.[0-9]+)*\.app$' | sort -rV
+          for xcode in $(ls /Applications | grep -E '^Xcode_[0-9]+(\.[0-9]+)*\.app$' | sort -rV); do
+            sed 's|for SDK in $SDKS; do|for SDK in $SDKS; do\n[ -f "$WDIR/$SDK$SDK_EXT" ] \&\& continue|g' tools/gen_sdk_package.sh | \
+            XCODEDIR=/Applications/$xcode SDK_COMPRESSOR=xz bash
+          done
+          mkdir -p sdk-${{ matrix.macos_versions }}
+          mv *.sdk.tar.xz sdk-${{ matrix.macos_versions }}
+      - name: Save SDK cache
+        uses: actions/cache/save@v4
+        if: always() && steps.cache-sdk-packages.outputs.cache-hit != 'true'
+        with:
+          path: sdk-${{ matrix.macos_versions }}
+          key: ${{ steps.cache-sdk-packages.outputs.cache-primary-key }}
+      - name: Upload SDK
+        id: upload_sdk
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdk-${{ matrix.macos_versions }}
+          path: sdk-${{ matrix.macos_versions }}
+          compression-level: 0
+  collect_sdks:
+    name: Collect SDKs
+    runs-on: ubuntu-latest
+    needs: package_sdk
+    outputs:
+      SDK_VERSIONS: ${{ steps.get_all_sdk_versions.outputs.result }}
+      SDK_FILES: ${{ steps.list_sdk_files.outputs.result }}
+    steps:
+      - name: Download SDK artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: 'sdk-*'
+          merge-multiple: false
+      - name: Collect SDKs
+        shell: bash
+        run: |
+          # Move SDK files from artifact folders to current directory
+          for folder in sdk-*; do
+            if [ -d "$folder" ]; then
+              echo "Processing folder: $folder"
+              for file in "$folder"/*.sdk.tar.xz; do
+                if [ -f "$file" ]; then
+                  filename=$(basename "$file")
+                  echo "Moving $file to $filename"
+                  mv "$file" "$filename"
+                fi
+              done
+            fi
+          done
+          # List SDK files for verification
+          ls -la *.sdk.tar.xz 2>/dev/null || echo "No SDK files found"
+      - name: List SDK files
+        id: list_sdk_files
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const files = fs.readdirSync('.').filter(file =>
+              file.endsWith('.sdk.tar.xz') && file.startsWith('MacOSX')
+            );
+            console.log('SDK files:', files);
+            return files;
+      - name: Get all SDK Versions
+        id: get_all_sdk_versions
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const files = fs.readdirSync('.').filter(file =>
+              file.endsWith('.sdk.tar.xz') && file.startsWith('MacOSX')
+            );
+            const sdk_versions = files.map(file => {
+              // Convert MacOSX10.13.sdk.tar.xz to 10-13
+              const name = file.replace(/\.sdk\.tar\.xz$/, '');
+              return name.replace(/^MacOSX/, '').replace(/\./g, '-');
+            }).filter(name => name && name !== '');
+            console.log('SDK versions:', sdk_versions);
+            return sdk_versions;
+      - name: Upload all SDKs as single artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: all-sdks
+          path: '*.sdk.tar.xz'
+          compression-level: 0
+  upload_individual_sdks:
+    name: Upload SDK ${{ matrix.sdk_version }}
+    runs-on: ubuntu-latest
+    needs: collect_sdks
+    permissions:
+      contents: read
+      actions: write
+    strategy:
+      fail-fast: false
+      matrix:
+        sdk_version: ${{ fromJSON(needs.collect_sdks.outputs.SDK_VERSIONS) }}
+    steps:
+      - name: Download all SDKs
+        uses: actions/download-artifact@v4
+        with:
+          name: all-sdks
+          path: sdks
+      - name: Prepare SDK for upload
+        shell: bash
+        run: |
+          # Convert version back to filename (e.g., 10-13 -> MacOSX10.13.sdk.tar.xz)
+          version_with_dots=$(echo "${{ matrix.sdk_version }}" | sed 's/-/./g')
+          sdk_file="sdks/MacOSX${version_with_dots}.sdk.tar.xz"
+          if [ -f "$sdk_file" ]; then
+            echo "Found SDK file: $sdk_file"
+            # Copy to a predictable location for the upload action
+            mkdir -p upload
+            cp "$sdk_file" "upload/"
+            ls -la upload/
+          else
+            echo "ERROR: SDK file not found: $sdk_file"
+            echo "Available files:"
+            ls -la sdks/
+            exit 1
+          fi
+      - name: Upload SDK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.sdk_version }}
+          path: upload/*.sdk.tar.xz
+          compression-level: 0

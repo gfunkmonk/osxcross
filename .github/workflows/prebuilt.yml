@@ -1,0 +1,100 @@
+---
+name: Pre-build osxcross
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: macOS SDK Version
+        type: choice
+        options:
+          - 10.6
+          - 10.7
+          - 10.8
+          - 10.10
+          - 10.11
+          - 10.12
+          - 10.13
+          - 10.14
+          - 10.15
+          - 11.1
+          - 11.3
+          - 12.0
+          - 12.1
+          - 12.3
+          - 13.0
+          - 13.1
+          - 13.3
+          - 14.0
+          - 14.2
+          - 14.4
+          - 14.5
+          - 15.0
+          - 15.1
+          - 15.2
+          - 15.4
+          - 15.5
+          - 26.0
+          - 26.1
+          - 26.2
+        default: 10.13
+env:
+  sdk_dl_url: https://github.com/gfunkmonk/macOS-SDK/releases/download/v1.0/MacOSX${{inputs.version }}.sdk.tar.xz
+jobs:
+  build-linux-x86-64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v6
+      - name: download SDK
+        run: |
+          wget -P tarballs ${{ env.sdk_dl_url }}
+      - name: Setup ccache
+        run: |
+          echo "CCACHE_NLEVELS=4" >> $GITHUB_ENV
+          # Link Compilers to /usr/bin/ccache
+          sudo ln -s /usr/bin/ccache /usr/local/bin/gcc
+          sudo ln -s /usr/bin/ccache /usr/local/bin/g++
+          sudo ln -s /usr/bin/ccache /usr/local/bin/clang
+          sudo ln -s /usr/bin/ccache /usr/local/bin/clang++
+          sudo ln -s /usr/bin/ccache /usr/local/bin/cpp
+          sudo ln -s /usr/bin/ccache /usr/local/bin/c++
+          sudo ln -s /usr/bin/ccache /usr/local/bin/cc
+          # Setup CCACHE Dir
+          sudo mkdir -p /mnt/ccache
+          sudo chown -R $USER:$USER /mnt/ccache
+          echo "CCACHE_DIR=/mnt/ccache" >> $GITHUB_ENV
+          echo "CCACHE Dir Set!"
+          df -h
+          echo "CCACHE Environment set!"
+      - name: Enable ccache
+        uses: Chocobo1/setup-ccache-action@v1
+        with:
+          update_packager_index: true
+          install_ccache: true
+          prepend_symlinks_to_path: true
+          ccache_options: |
+            max_size=10000M
+            compression=true
+            compression_level=6
+            hash_dir=false
+            sloppiness=file_macro,locale,time_macros
+            file_clone=true
+            hard_link=false
+            inode_cache=true
+            recache=false
+            direct_mode=true
+            depend_mode=true
+            compiler_check=content
+      - name: build osxcross
+        run: |
+          UNATTENDED=1 TARGET_DIR=${{ github.workspace }}/osxcross ./build.sh
+      - name: archive osxcross
+        run: |
+          tar -cvf osxcross-${{ inputs.version }}.tar osxcross
+          xz -9 osxcross-${{ inputs.version }}.tar
+      - name: upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: osxcross-linux-x86-64-${{ inputs.version }}
+          path: osxcross-${{ inputs.version }}.tar.xz

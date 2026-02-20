@@ -20,14 +20,15 @@ fi
 set_and_verify_sdk_path
 
 case $SDK_VERSION in
-  10.4*|10.5*)
+  10.3*|10.4*)
     echo ""
-    echo "SDK <= 10.5 no longer supported. Use 'osxcross-1.1' branch instead."
+    echo "SDK <= 10.4 no longer supported. Use 'osxcross-1.1' branch instead."
     exit 1
       ;;
 esac
 
 case $SDK_VERSION in
+  10.5*)   TARGET=darwin9;   SUPPORTED_ARCHS="i386"; NEED_TAPI_SUPPORT=0; OSX_VERSION_MIN_INT=10.5;;
   10.6*)   TARGET=darwin10;   SUPPORTED_ARCHS="i386 x86_64"; NEED_TAPI_SUPPORT=0; OSX_VERSION_MIN_INT=10.6 ;;
   10.7*)   TARGET=darwin11;   SUPPORTED_ARCHS="i386 x86_64"; NEED_TAPI_SUPPORT=0; OSX_VERSION_MIN_INT=10.6 ;;
   10.8*)   TARGET=darwin12;   SUPPORTED_ARCHS="i386 x86_64 x86_64h"; NEED_TAPI_SUPPORT=0; OSX_VERSION_MIN_INT=10.6 ;;
@@ -48,10 +49,10 @@ case $SDK_VERSION in
   12.2*)   TARGET=darwin21.3; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.9 ;;
   12.3*)   TARGET=darwin21.4; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.9 ;;
   12.4*)   TARGET=darwin21.5; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.9 ;;
-  13|13.0*) TARGET=darwin22.1; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.9 ;;
-  13.1*)   TARGET=darwin22.2; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.9 ;;
-  13.2*)   TARGET=darwin22.3; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.9 ;;
-  13.3*)   TARGET=darwin22.4; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.9 ;;
+  13|13.0*) TARGET=darwin22.1; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.13 ;;
+  13.1*)   TARGET=darwin22.2; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.13 ;;
+  13.2*)   TARGET=darwin22.3; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.13 ;;
+  13.3*)   TARGET=darwin22.4; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.13 ;;
   14|14.0*) TARGET=darwin23;   SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.13 ;;
   14.1*)   TARGET=darwin23.1; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.13 ;;
   14.2*)   TARGET=darwin23.2; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.13 ;;
@@ -184,7 +185,7 @@ function create_arch_symlinks()
   if [ "$arch" = "$default_arch" ]; then
     return
   fi
-  for TOOL in ${TOOLS[@]}; do
+  for TOOL in "${TOOLS[@]}"; do
     verbose_cmd create_symlink $TOOL $(echo "$TOOL" | $SED "s/$(first_supported_arch)/$arch/g")
   done
 }
@@ -204,10 +205,6 @@ fi
 if arch_supported arm64; then
   create_arch_symlinks "aarch64"
   create_arch_symlinks "arm64"
-fi
-
-if arch_supported arm64e; then
-  create_arch_symlinks "arm64e"
 fi
 
 # For unpatched dsymutil. There is currently no way around it.
@@ -294,8 +291,8 @@ if [ $(osxcross-cmp $SDK_VERSION "<" $OSX_VERSION_MIN) -eq 1 ]; then
   echo "OSX_VERSION_MIN must be <= SDK_VERSION"
   trap "" EXIT
   exit 1
-elif [ $(osxcross-cmp $OSX_VERSION_MIN "<" 10.6) -eq 1  ]; then
-  echo "OSX_VERSION_MIN must be >= 10.6"
+elif [ $(osxcross-cmp $OSX_VERSION_MIN "<" 10.5) -eq 1  ]; then
+  echo "OSX_VERSION_MIN must be >= 10.5"
   trap "" EXIT
   exit 1
 fi

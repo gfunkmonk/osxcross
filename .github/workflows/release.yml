@@ -172,14 +172,6 @@ jobs:
           cache_dir_levels = 3
           EOF
           echo "CCACHE Environment set!"
-      - name: Cache ccache
-        id: cache-ccache
-        uses: actions/cache/restore@v4
-        with:
-          path: /mnt/ccache
-          key: ccache-apple-clang-ubuntu-${{ matrix.ubuntu_version }}-${{ matrix.runs-on }}-${{ hashFiles('build_apple_clang.sh', 'build_clang.sh') }}
-          restore-keys: |
-            ccache-apple-clang-ubuntu-${{ matrix.ubuntu_version }}-${{ matrix.runs-on }}
       - name: Enable ccache
         uses: Chocobo1/setup-ccache-action@v1
         with:
@@ -216,12 +208,6 @@ jobs:
         with:
           path: dist/
           key: ${{ steps.cache-apple-clang.outputs.cache-primary-key }}
-      - name: Save ccache
-        uses: actions/cache/save@v4
-        if: steps.cache-ccache.outputs.cache-hit != 'true'
-        with:
-          path: /mnt/ccache
-          key: ${{ steps.cache-ccache.outputs.cache-primary-key }}
       - name: Upload Apple Clang artifact
         uses: actions/upload-artifact@v4
         with:

@@ -7,13 +7,19 @@ on:
       freespace:
         description: 'Clear Disk Space'
         required: true
-        type: boolean
-        default: false
+        type: choice
+        default: no
+        options:
+          - no
+          - yes
       swapspace:
         description: 'Add Swap File'
         required: true
-        type: boolean
-        default: false
+        type: choice
+        default: no
+        options:
+          - no
+          - yes
       sdk_14:
         description: 'Build macOS 14 SDKs'
         required: false
@@ -140,36 +146,24 @@ jobs:
           chmod +x build_apple_clang_script.sh
       - name: Setup ccache
         run: |
-          # Setup CCACHE Dir
+          # Setup CCACHE
           sudo mkdir -p /mnt/ccache
           sudo chown -R $USER:$USER /mnt/ccache
-          echo "CCACHE_DIR=/mnt/ccache" >> $GITHUB_ENV
-          echo "CCACHE Dir Set!"
-          df -h
-          # Link Compilers to /usr/bin/ccache
-          sudo ln -s /usr/bin/ccache /usr/local/bin/gcc
-          sudo ln -s /usr/bin/ccache /usr/local/bin/g++
-          sudo ln -s /usr/bin/ccache /usr/local/bin/clang
-          sudo ln -s /usr/bin/ccache /usr/local/bin/clang++
-          sudo ln -s /usr/bin/ccache /usr/local/bin/cpp
-          sudo ln -s /usr/bin/ccache /usr/local/bin/c++
-          sudo ln -s /usr/bin/ccache /usr/local/bin/cc
-
-          sudo cat >> /mnt/ccache/ccache.conf << 'EOF'
-          max_size = 10.0GiB
-          hash_dir = false
-          hard_link = false
-          compiler_check = content
-          compression = true
-          compression_level = 7
-          recache = false
-          sloppiness=file_macro,locale,time_macros
-          file_clone=true
-          hard_link=false
-          inode_cache=true
-          direct_mode=true
-          depend_mode=true
-          cache_dir_levels = 3
+          cat >> $GITHUB_ENV << 'EOF'
+          CCACHE_DIR=/mnt/ccache
+          CCACHE_MAXSIZE=10.0GiB
+          CCACHE_NOHASHDIR=true
+          CCACHE_NOHARDLINK=true
+          CCACHE_NLEVELS=4
+          CCACHE_COMPILERCHECK=content
+          CCACHE_COMPRESS=1
+          CCACHE_COMPRESSLEVEL=7
+          CCACHE_INODECACHE=true
+          CCACHE_NORECACHE=true
+          CCACHE_SLOPINESS=file_macro,locale,time_macros
+          CCACHE_FILECLONE=true
+          CCACHE_DIRECT=true
+          CCACHE_DEPEND=true
           EOF
           echo "CCACHE Environment set!"
       - name: Enable ccache
@@ -177,18 +171,7 @@ jobs:
         with:
           update_packager_index: true
           install_ccache: true
-          prepend_symlinks_to_path: false
-          ccache_options: |
-            compression=true
-            compression_level=7
-            sloppiness=file_macro,locale,time_macros
-            file_clone=true
-            hard_link=false
-            inode_cache=true
-            recache=false
-            direct_mode=true
-            depend_mode=true
-            compiler_check=content
+          prepend_symlinks_to_path: true
       #- name: 🔐 🄢🄢🄗 ⒱⒤⒜ 🄒⒧⒪⒰⒟⒡⒧⒜⒭⒠
       #  uses: valeriangalliat/action-sshd-cloudflared@v1
       - name: Build Apple Clang
@@ -201,6 +184,13 @@ jobs:
             --env PATH="/usr/lib/ccache:$PATH" \
             --workdir /osxcross \
             ubuntu:${{ matrix.ubuntu_version }} \
+            ln -s /usr/bin/ccache /usr/local/bin/gcc \
+            ln -s /usr/bin/ccache /usr/local/bin/g++ \
+            ln -s /usr/bin/ccache /usr/local/bin/clang \
+            ln -s /usr/bin/ccache /usr/local/bin/clang++ \
+            ln -s /usr/bin/ccache /usr/local/bin/cpp \
+            ln -s /usr/bin/ccache /usr/local/bin/c++ \
+            ln -s /usr/bin/ccache /usr/local/bin/cc \
             /bin/bash -c "/osxcross/build_apple_clang_script.sh '${{ matrix.ubuntu_version }}'"
       - name: Save Apple Clang build cache
         uses: actions/cache/save@v4
@@ -272,18 +262,6 @@ jobs:
         with:
           name: apple-clang-${{ matrix.ubuntu_version }}-${{ matrix.runs-on == 'ubuntu-24.04-arm' && 'aarch64' || 'x86_64' }}
           path: apple-clang
-      - name: Setup ccache directory
-        run: |
-          sudo mkdir -p /mnt/ccache
-          sudo chown -R $USER:$USER /mnt/ccache
-      - name: Cache ccache
-        id: cache-ccache-osxcross
-        uses: actions/cache/restore@v4
-        with:
-          path: /mnt/ccache
-          key: ccache-osxcross-ubuntu-${{ matrix.ubuntu_version }}-${{ matrix.runs-on }}-${{ hashFiles('build.sh') }}
-          restore-keys: |
-            ccache-osxcross-ubuntu-${{ matrix.ubuntu_version }}-${{ matrix.runs-on }}
       - name: Cache osxcross build
         id: cache-osxcross
         uses: actions/cache/restore@v4
@@ -371,6 +349,13 @@ jobs:
             --env PATH="/usr/lib/ccache:$PATH" \
             --workdir /osxcross \
             ubuntu:${{ matrix.ubuntu_version }} \
+            ln -s /usr/bin/ccache /usr/local/bin/gcc \
+            ln -s /usr/bin/ccache /usr/local/bin/g++ \
+            ln -s /usr/bin/ccache /usr/local/bin/clang \
+            ln -s /usr/bin/ccache /usr/local/bin/clang++ \
+            ln -s /usr/bin/ccache /usr/local/bin/cpp \
+            ln -s /usr/bin/ccache /usr/local/bin/c++ \
+            ln -s /usr/bin/ccache /usr/local/bin/cc \
             /bin/bash -c "/osxcross/build_script.sh '${{ matrix.ubuntu_version }}' '${{ matrix.sdk_versions }}'"
       - name: Save osxcross build cache
         uses: actions/cache/save@v4
@@ -378,12 +363,6 @@ jobs:
         with:
           path: dist/
           key: ${{ steps.cache-osxcross.outputs.cache-primary-key }}
-      - name: Save ccache
-        uses: actions/cache/save@v4
-        if: steps.cache-ccache-osxcross.outputs.cache-hit != 'true'
-        with:
-          path: /mnt/ccache
-          key: ${{ steps.cache-ccache-osxcross.outputs.cache-primary-key }}
       - name: Release
         uses: softprops/action-gh-release@v2
         with:

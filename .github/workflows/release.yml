@@ -14,12 +14,31 @@ on:
         required: true
         type: boolean
         default: false
+      sdk_14:
+        description: 'Build macOS 14 SDKs'
+        required: false
+        type: boolean
+        default: true
+      sdk_15:
+        description: 'Build macOS 15 SDKs'
+        required: false
+        type: boolean
+        default: true
+      sdk_26:
+        description: 'Build macOS 26 SDKs'
+        required: false
+        type: boolean
+        default: true
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   package_sdks:
     uses: ./.github/workflows/sdk.yml
+    with:
+      sdk_14: ${{ inputs.sdk_14 }}
+      sdk_15: ${{ inputs.sdk_15 }}
+      sdk_26: ${{ inputs.sdk_26 }}
   build_apple_clang:
     name: Build Apple Clang
     strategy:

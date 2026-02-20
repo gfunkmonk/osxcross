@@ -3,21 +3,82 @@ name: SDK
 
 on:
   workflow_dispatch:
+    inputs:
+      sdk_14:
+        description: 'Build macOS 14 SDKs'
+        required: false
+        type: boolean
+        default: true
+      sdk_15:
+        description: 'Build macOS 15 SDKs'
+        required: false
+        type: boolean
+        default: true
+      sdk_26:
+        description: 'Build macOS 26 SDKs'
+        required: false
+        type: boolean
+        default: true
   workflow_call:
+    inputs:
+      sdk_14:
+        description: 'Build macOS 14 SDKs'
+        required: false
+        type: boolean
+        default: true
+      sdk_15:
+        description: 'Build macOS 15 SDKs'
+        required: false
+        type: boolean
+        default: true
+      sdk_26:
+        description: 'Build macOS 26 SDKs'
+        required: false
+        type: boolean
+        default: true
     outputs:
       SDK_VERSIONS:
         description: "List of SDK versions"
         value: ${{ jobs.collect_sdks.outputs.SDK_VERSIONS }}
 jobs:
+  determine_sdks:
+    name: Determine SDK Versions
+    runs-on: ubuntu-latest
+    outputs:
+      sdk_versions: ${{ steps.set_matrix.outputs.sdk_versions }}
+    steps:
+      - name: Set SDK matrix
+        id: set_matrix
+        run: |
+          SDK_VERSIONS="["
+          SEPARATOR=""
+
+          if [ "${{ inputs.sdk_14 }}" == "true" ]; then
+            SDK_VERSIONS="${SDK_VERSIONS}${SEPARATOR}14"
+            SEPARATOR=","
+          fi
+
+          if [ "${{ inputs.sdk_15 }}" == "true" ]; then
+            SDK_VERSIONS="${SDK_VERSIONS}${SEPARATOR}15"
+            SEPARATOR=","
+          fi
+
+          if [ "${{ inputs.sdk_26 }}" == "true" ]; then
+            SDK_VERSIONS="${SDK_VERSIONS}${SEPARATOR}26"
+            SEPARATOR=","
+          fi
+
+          SDK_VERSIONS="${SDK_VERSIONS}]"
+          echo "sdk_versions=${SDK_VERSIONS}" >> $GITHUB_OUTPUT
+          echo "Selected SDK versions: ${SDK_VERSIONS}"
   package_sdk:
     name: Package SDK
+    needs: determine_sdks
+    if: needs.determine_sdks.outputs.sdk_versions != '[]'
     strategy:
       fail-fast: false
       matrix:
-        macos_versions:
-          - 14
-          - 15
-          - 26
+        macos_versions: ${{ fromJSON(needs.determine_sdks.outputs.sdk_versions) }}
     runs-on: macos-${{ matrix.macos_versions }}
     steps:
       - uses: actions/checkout@v6

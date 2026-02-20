@@ -166,15 +166,22 @@ jobs:
           CCACHE_DEPEND=true
           EOF
           echo "CCACHE Environment set!"
-      - name: Enable ccache
-        uses: Chocobo1/setup-ccache-action@v1
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
         with:
-          update_packager_index: true
-          install_ccache: true
-          prepend_symlinks_to_path: true
-          ccache_options: |
-            max_size=10000M
-            cache_dir=/mnt/ccache
+          create-symlink: true
+          Verbosity level: 1
+          max-size: 10000MB
+          key: ccache-${{ matrix.runs-on }}
+      #- name: Enable ccache
+      #  uses: Chocobo1/setup-ccache-action@v1
+      #  with:
+      #    update_packager_index: true
+      #    install_ccache: true
+      #    prepend_symlinks_to_path: true
+      #    ccache_options: |
+      #      max_size=10000M
+      #      cache_dir=/mnt/ccache
       #- name: 🔐 🄢🄢🄗 ⒱⒤⒜ 🄒⒧⒪⒰⒟⒡⒧⒜⒭⒠
       #  uses: valeriangalliat/action-sshd-cloudflared@v1
       - name: Build Apple Clang
@@ -368,15 +375,22 @@ jobs:
           CCACHE_DEPEND=true
           EOF
           echo "CCACHE Environment set!"
-      - name: Enable ccache
-        uses: Chocobo1/setup-ccache-action@v1
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
         with:
-          update_packager_index: true
-          install_ccache: true
-          prepend_symlinks_to_path: true
-          ccache_options: |
-            max_size=10000M
-            cache_dir=/mnt/ccache
+          create-symlink: true
+          Verbosity level: 1
+          max-size: 10000MB
+          key: ccache-${{ matrix.runs-on }}
+      #- name: Enable ccache
+      #  uses: Chocobo1/setup-ccache-action@v1
+      #  with:
+      #    update_packager_index: true
+      #    install_ccache: true
+      #    prepend_symlinks_to_path: true
+      #    ccache_options: |
+      #      max_size=10000M
+      #      cache_dir=/mnt/ccache
       #- name: 🔐 🄢🄢🄗 ⒱⒤⒜ 🄒⒧⒪⒰⒟⒡⒧⒜⒭⒠
       #  uses: valeriangalliat/action-sshd-cloudflared@v1
       - name: Build osxcross

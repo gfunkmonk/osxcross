@@ -185,7 +185,7 @@ jobs:
             /bin/bash -c "/osxcross/build_apple_clang_script.sh '${{ matrix.ubuntu_version }}'"
       - name: Save Apple Clang build cache
         uses: actions/cache/save@v4
-        if: always() && steps.cache-apple-clang.outputs.cache-hit != 'true'
+        if: steps.cache-apple-clang.outputs.cache-hit != 'true'
         with:
           path: dist/
           key: ${{ steps.cache-apple-clang.outputs.cache-primary-key }}
@@ -343,7 +343,7 @@ jobs:
             /bin/bash -c "/osxcross/build_script.sh '${{ matrix.ubuntu_version }}' '${{ matrix.sdk_versions }}'"
       - name: Save osxcross build cache
         uses: actions/cache/save@v4
-        if: always() && steps.cache-osxcross.outputs.cache-hit != 'true'
+        if: steps.cache-osxcross.outputs.cache-hit != 'true'
         with:
           path: dist/
           key: ${{ steps.cache-osxcross.outputs.cache-primary-key }}

@@ -161,7 +161,7 @@ jobs:
           CCACHE_INODECACHE=true
           CCACHE_RECACHE=true
           CCACHE_SLOPINESS=file_macro,locale,time_macros
-          CCACHE_FILECLONE=false
+          CCACHE_NOFILECLONE=true
           CCACHE_DIRECT=true
           CCACHE_DEPEND=true
           EOF
@@ -170,7 +170,7 @@ jobs:
         uses: hendrikmuhs/ccache-action@v1.2
         with:
           create-symlink: true
-          Verbosity level: 1
+          verbose: 1
           max-size: 10000MB
           key: ccache-${{ matrix.runs-on }}
       #- name: Enable ccache
@@ -202,7 +202,7 @@ jobs:
             --env CCACHE_INODECACHE=true \
             --env CCACHE_RECACHE=true \
             --env CCACHE_SLOPINESS=file_macro,locale,time_macros \
-            --env CCACHE_FILECLONE=false \
+            --env CCACHE_NOFILECLONE=true \
             --env CCACHE_DIRECT=true \
             --env CCACHE_DEPEND=true \
             --workdir /osxcross \
@@ -370,7 +370,7 @@ jobs:
           CCACHE_INODECACHE=true
           CCACHE_RECACHE=true
           CCACHE_SLOPINESS=file_macro,locale,time_macros
-          CCACHE_FILECLONE=false
+          CCACHE_NOFILECLONE=true
           CCACHE_DIRECT=true
           CCACHE_DEPEND=true
           EOF
@@ -379,7 +379,7 @@ jobs:
         uses: hendrikmuhs/ccache-action@v1.2
         with:
           create-symlink: true
-          Verbosity level: 1
+          verbose: 1
           max-size: 10000MB
           key: ccache-${{ matrix.runs-on }}
       #- name: Enable ccache
@@ -411,7 +411,7 @@ jobs:
             --env CCACHE_INODECACHE=true \
             --env CCACHE_RECACHE=true \
             --env CCACHE_SLOPINESS=file_macro,locale,time_macros \
-            --env CCACHE_FILECLONE=false \
+            --env CCACHE_NOFILECLONE=true \
             --env CCACHE_DIRECT=true \
             --env CCACHE_DEPEND=true \
             --workdir /osxcross \

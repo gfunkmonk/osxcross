@@ -49,6 +49,10 @@ jobs:
       - name: download SDK
         run: |
           wget -P tarballs ${{ env.sdk_dl_url }}
+      - name: Setup ccache directory
+        run: |
+          sudo mkdir -p /mnt/ccache
+          sudo chown -R $USER:$USER /mnt/ccache
       - name: Cache ccache
         id: cache-ccache
         uses: actions/cache/restore@v4
@@ -61,6 +65,7 @@ jobs:
       - name: Setup ccache
         run: |
           echo "CCACHE_NLEVELS=4" >> $GITHUB_ENV
+          echo "CCACHE_DIR=/mnt/ccache" >> $GITHUB_ENV
           # Link Compilers to /usr/bin/ccache
           sudo ln -s /usr/bin/ccache /usr/local/bin/gcc
           sudo ln -s /usr/bin/ccache /usr/local/bin/g++
@@ -69,10 +74,6 @@ jobs:
           sudo ln -s /usr/bin/ccache /usr/local/bin/cpp
           sudo ln -s /usr/bin/ccache /usr/local/bin/c++
           sudo ln -s /usr/bin/ccache /usr/local/bin/cc
-          # Setup CCACHE Dir
-          sudo mkdir -p /mnt/ccache
-          sudo chown -R $USER:$USER /mnt/ccache
-          echo "CCACHE_DIR=/mnt/ccache" >> $GITHUB_ENV
           echo "CCACHE Dir Set!"
           df -h
           echo "CCACHE Environment set!"

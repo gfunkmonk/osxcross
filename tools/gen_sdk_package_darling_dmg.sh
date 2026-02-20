@@ -73,7 +73,7 @@ fi
 
 popd &>/dev/null # build dir
 
-TMP=$(mktemp -d /tmp/XXXXXXXXX)
+TMP=$(mktemp -d)
 
 function cleanup()
 {

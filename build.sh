@@ -7,6 +7,10 @@
 
 VERSION=1.5
 
+TAPI_VERSION="1600.0.11.8"
+CCTOOLS_VERSION="986"
+LINKER_VERSION="711"
+
 pushd "${0%/*}" &>/dev/null
 
 source tools/tools.sh
@@ -48,10 +52,10 @@ case $SDK_VERSION in
   12.2*)   TARGET=darwin21.3; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.9 ;;
   12.3*)   TARGET=darwin21.4; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.9 ;;
   12.4*)   TARGET=darwin21.5; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.9 ;;
-  13|13.0*) TARGET=darwin22.1; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.9 ;;
-  13.1*)   TARGET=darwin22.2; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.9 ;;
-  13.2*)   TARGET=darwin22.3; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.9 ;;
-  13.3*)   TARGET=darwin22.4; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.9 ;;
+  13|13.0*) TARGET=darwin22.1; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.13 ;;
+  13.1*)   TARGET=darwin22.2; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.13 ;;
+  13.2*)   TARGET=darwin22.3; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.13 ;;
+  13.3*)   TARGET=darwin22.4; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.13 ;;
   14|14.0*) TARGET=darwin23;   SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.13 ;;
   14.1*)   TARGET=darwin23.1; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.13 ;;
   14.2*)   TARGET=darwin23.2; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.13 ;;
@@ -135,7 +139,7 @@ build_xar
 ## Apple TAPI Library ##
 
 if [ $NEED_TAPI_SUPPORT -eq 1 ]; then
-  get_sources https://github.com/tpoechtrager/apple-libtapi.git 1300.6.5
+  get_sources https://github.com/tpoechtrager/apple-libtapi.git "$TAPI_VERSION"
 
   if [ $f_res -eq 1 ]; then
     pushd $CURRENT_BUILD_PROJECT_NAME &>/dev/null
@@ -147,10 +151,6 @@ if [ $NEED_TAPI_SUPPORT -eq 1 ]; then
 fi
 
 ## cctools and ld64 ##
-
-CCTOOLS_VERSION=986
-LINKER_VERSION=711
-
 get_sources \
   https://github.com/tpoechtrager/cctools-port.git \
   $CCTOOLS_VERSION-ld64-$LINKER_VERSION
@@ -184,7 +184,7 @@ function create_arch_symlinks()
   if [ "$arch" = "$default_arch" ]; then
     return
   fi
-  for TOOL in ${TOOLS[@]}; do
+  for TOOL in "${TOOLS[@]}"; do
     verbose_cmd create_symlink $TOOL $(echo "$TOOL" | $SED "s/$(first_supported_arch)/$arch/g")
   done
 }

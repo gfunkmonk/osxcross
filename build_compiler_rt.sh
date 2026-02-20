@@ -78,6 +78,11 @@ then
   exit 1
 fi
 
+export OSX_ARCHS="x86_64;x86_64h"
+if [ $(osxcross-cmp $SDK_VERSION ">=" 11.0) -eq 1 ]; then
+  export OSX_ARCHS="$OSX_ARCHS;arm64"
+fi
+
 HAVE_OS_LOCK=0
 
 if echo "#include <os/lock.h>" | xcrun clang -E - &>/dev/null; then
@@ -186,6 +191,8 @@ if [ $f_res -eq 1 ]; then
       pushd $build_dir &>/dev/null
 
       CC=$(xcrun -f clang) CXX=$(xcrun -f clang++) $CMAKE .. \
+        -DDARWIN_osx_ARCHS="$OSX_ARCHS" \
+        -DDARWIN_osx_BUILTIN_ARCHS="$OSX_ARCHS" \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_SYSTEM_NAME=Darwin \
         -DCOMPILER_RT_ENABLE_IOS=OFF \

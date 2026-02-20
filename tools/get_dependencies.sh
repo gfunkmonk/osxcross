@@ -59,23 +59,23 @@ unknown()
 }
 
 if [ -e /etc/issue ]; then
- if [ "`grep -i ubuntu /etc/issue`" ]; then
+ if [ "$(grep -i ubuntu /etc/issue)" ]; then
   get_debian_deps
- elif [ "`grep -i debian /etc/issue`" ]; then
+ elif [ "$(grep -i debian /etc/issue)" ]; then
   get_debian_deps
- elif [ "`grep -i raspbian /etc/issue`" ]; then
+ elif [ "$(grep -i raspbian /etc/issue)" ]; then
   get_debian_deps
- elif [ "`grep -i mint /etc/issue`" ]; then
+ elif [ "$(grep -i mint /etc/issue)" ]; then
   get_debian_deps
- elif [ "`grep -i suse /etc/issue`" ]; then
+ elif [ "$(grep -i suse /etc/issue)" ]; then
   get_opensuse_deps
- elif [ "`grep -i fedora /etc/issue`" ]; then
+ elif [ "$(grep -i fedora /etc/issue)" ]; then
   get_fedora_deps
- elif [ "`grep -i red.hat /etc/issue`" ]; then
+ elif [ "$(grep -i red.hat /etc/issue)" ]; then
   get_fedora_deps
- elif [ "`grep -i mageia /etc/issue`" ]; then
+ elif [ "$(grep -i mageia /etc/issue)" ]; then
   get_mageia_deps
- elif [ "`grep -i arch /etc/issue`" ]; then
+ elif [ "$(grep -i arch /etc/issue)" ]; then
   echo "Running pacman to install dependencies..."
   get_arch_deps
   echo "Downloading and Installing uuid..."
@@ -83,9 +83,9 @@ if [ -e /etc/issue ]; then
  else
   unknown
  fi
-elif [ "`uname | grep -i freebsd `" ]; then
+elif uname | grep -qi freebsd; then
  get_freebsd_deps
-elif [ "`uname | grep -i netbsd`" ]; then
+elif uname | grep -qi netbsd; then
  get_netbsd_deps
 else
  unknown

@@ -4,3 +4,7 @@
 cpucount
 build/
 target/
+tarballs/*.tar.*
+tarballs/*.zip
+*.tar.*
+*.zip

@@ -272,18 +272,31 @@ jobs:
         with:
           name: apple-clang-${{ matrix.ubuntu_version }}-${{ matrix.runs-on == 'ubuntu-24.04-arm' && 'aarch64' || 'x86_64' }}
           path: apple-clang
-      - name: Setup ccache directory
+      - name: Setup ccache
         run: |
+          # Setup CCACHE Dir
           sudo mkdir -p /mnt/ccache
           sudo chown -R $USER:$USER /mnt/ccache
-      - name: Cache ccache
-        id: cache-ccache-osxcross
-        uses: actions/cache/restore@v4
+          echo "CCACHE_DIR=/mnt/ccache" >> $GITHUB_ENV
+          echo "CCACHE Dir Set!"
+          df -h
+      - name: Enable ccache
+        uses: Chocobo1/setup-ccache-action@v1
         with:
-          path: /mnt/ccache
-          key: ccache-osxcross-ubuntu-${{ matrix.ubuntu_version }}-${{ matrix.runs-on }}-${{ hashFiles('build.sh') }}
-          restore-keys: |
-            ccache-osxcross-ubuntu-${{ matrix.ubuntu_version }}-${{ matrix.runs-on }}
+          update_packager_index: true
+          install_ccache: true
+          prepend_symlinks_to_path: false
+          ccache_options: |
+            compression=true
+            compression_level=7
+            sloppiness=file_macro,locale,time_macros
+            file_clone=true
+            hard_link=false
+            inode_cache=true
+            recache=false
+            direct_mode=true
+            depend_mode=true
+            compiler_check=content
       - name: Cache osxcross build
         id: cache-osxcross
         uses: actions/cache/restore@v4
@@ -378,12 +391,6 @@ jobs:
         with:
           path: dist/
           key: ${{ steps.cache-osxcross.outputs.cache-primary-key }}
-      - name: Save ccache
-        uses: actions/cache/save@v4
-        if: steps.cache-ccache-osxcross.outputs.cache-hit != 'true'
-        with:
-          path: /mnt/ccache
-          key: ${{ steps.cache-ccache-osxcross.outputs.cache-primary-key }}
       - name: Release
         uses: softprops/action-gh-release@v2
         with:

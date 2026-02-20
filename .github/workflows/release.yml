@@ -26,8 +26,8 @@ jobs:
       fail-fast: false
       matrix:
         ubuntu_version: [24.04]
-        runner: [ubuntu-latest, ubuntu-24.04-arm]
-    runs-on: ${{ matrix.runner }}
+        runs-on: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runs-on }}
     steps:
       - if: ${{ inputs.freespace }}
         name: Clear up some disk space
@@ -194,6 +194,7 @@ jobs:
         with:
           name: apple-clang-${{ matrix.ubuntu_version }}-${{ matrix.runs-on == 'ubuntu-24.04-arm' && 'aarch64' || 'x86_64' }}
           path: dist/*
+          overwrite: true
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
@@ -234,7 +235,7 @@ jobs:
       matrix:
         sdk_versions: ${{ fromJSON(needs.package_sdks.outputs.SDK_VERSIONS) }}
         ubuntu_version: [24.04]
-        runner: [ubuntu-latest, ubuntu-24.04-arm]
+        runs-on: [ubuntu-latest, ubuntu-24.04-arm]
     runs-on: ${{ matrix.runs-on }}
     needs:
       - package_sdks

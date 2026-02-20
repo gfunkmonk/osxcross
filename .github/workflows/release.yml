@@ -46,9 +46,9 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: dist/
-          key: apple-clang-21-ubuntu-${{ matrix.ubuntu_version }}-${{ matrix.runs-on }}-${{ hashFiles('build_apple_clang.sh', 'build_clang.sh', '.github/workflows/release.yml') }}
+          key: apple-clang-21-ubuntu-${{ matrix.ubuntu_version }}-${{ matrix.runner }}-${{ hashFiles('build_apple_clang.sh', 'build_clang.sh', '.github/workflows/release.yml') }}
           restore-keys: |
-            apple-clang-21-ubuntu-${{ matrix.ubuntu_version }}-${{ matrix.runs-on }}
+            apple-clang-21-ubuntu-${{ matrix.ubuntu_version }}-${{ matrix.runner }}
       - if: ${{ inputs.swapspace }}
         name: Set up swap space
         uses: thejerrybao/setup-swap-space@v1
@@ -192,7 +192,7 @@ jobs:
       - name: Upload Apple Clang artifact
         uses: actions/upload-artifact@v4
         with:
-          name: apple-clang-${{ matrix.ubuntu_version }}-${{ matrix.runs-on == 'ubuntu-24.04-arm' && 'aarch64' || 'x86_64' }}
+          name: apple-clang-${{ matrix.ubuntu_version }}-${{ matrix.runner == 'ubuntu-24.04-arm' && 'aarch64' || 'x86_64' }}
           path: dist/*
       - name: Release
         uses: softprops/action-gh-release@v2
@@ -235,7 +235,7 @@ jobs:
         sdk_versions: ${{ fromJSON(needs.package_sdks.outputs.SDK_VERSIONS) }}
         ubuntu_version: [24.04]
         runner: [ubuntu-latest, ubuntu-24.04-arm]
-    runs-on: ${{ matrix.runs-on }}
+    runs-on: ${{ matrix.runner }}
     needs:
       - package_sdks
       - release_sdks
@@ -250,16 +250,16 @@ jobs:
       - name: Download Apple Clang
         uses: actions/download-artifact@v4
         with:
-          name: apple-clang-${{ matrix.ubuntu_version }}-${{ matrix.runs-on == 'ubuntu-24.04-arm' && 'aarch64' || 'x86_64' }}
+          name: apple-clang-${{ matrix.ubuntu_version }}-${{ matrix.runner == 'ubuntu-24.04-arm' && 'aarch64' || 'x86_64' }}
           path: apple-clang
       - name: Cache osxcross build
         id: cache-osxcross
         uses: actions/cache/restore@v4
         with:
           path: dist/
-          key: osxcross-ubuntu-${{ matrix.ubuntu_version }}-${{ matrix.runs-on }}-${{ hashFiles('build.sh', '.github/workflows/release.yml') }}
+          key: osxcross-ubuntu-${{ matrix.ubuntu_version }}-${{ matrix.runner }}-${{ hashFiles('build.sh', '.github/workflows/release.yml') }}
           restore-keys: |
-            osxcross-ubuntu-${{ matrix.ubuntu_version }}-${{ matrix.runs-on }}
+            osxcross-ubuntu-${{ matrix.ubuntu_version }}-${{ matrix.runner }}
       - name: Create build script
         run: |
           cat > build_script.sh << 'EOF'

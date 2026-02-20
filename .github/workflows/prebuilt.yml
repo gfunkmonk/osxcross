@@ -70,13 +70,6 @@ jobs:
           CCACHE_DIRECT=true
           CCACHE_DEPEND=true
           EOF
-          ln -s /usr/bin/ccache /usr/local/bin/gcc
-          ln -s /usr/bin/ccache /usr/local/bin/g++
-          ln -s /usr/bin/ccache /usr/local/bin/clang
-          ln -s /usr/bin/ccache /usr/local/bin/clang++
-          ln -s /usr/bin/ccache /usr/local/bin/cpp
-          ln -s /usr/bin/ccache /usr/local/bin/c++
-          ln -s /usr/bin/ccache /usr/local/bin/cc
           echo "CCACHE Environment set!"
       - name: Enable ccache
         uses: Chocobo1/setup-ccache-action@v1

@@ -37,6 +37,7 @@ on:
           - 26.0
           - 26.1
           - 26.2
+          - 26.4         
         default: 10.13
 env:
   sdk_dl_url: https://github.com/gfunkmonk/macOS-SDK/releases/download/v1.0/MacOSX${{inputs.version }}.sdk.tar.xz

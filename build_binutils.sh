@@ -17,12 +17,14 @@ eval $(tools/osxcross_conf.sh)
 
 # binutils version to build
 if [ -z "$BINUTILS_VERSION" ]; then
-  BINUTILS_VERSION=2.32
+  #BINUTILS_VERSION=2.32
+  BINUTILS_VERSION=2.44
 fi
 
 # gdb version to build
 if [ -z "$GDB_VERSION" ]; then
-  GDB_VERSION=16.2
+  #GDB_VERSION=16.2
+  GDB_VERSION=17.1
 fi
 
 # architecture to target
@@ -44,13 +46,13 @@ function build_and_install()
 {
   if [ ! -f "have_$1_$2_${TARGET}_${TARGET_ARCH}" ]; then
     pushd $TARBALL_DIR &>/dev/null
-    download "$MIRROR/$1/$1-$2.tar.gz"
+    download "$MIRROR/$1/$1-$2.tar.xz"
     popd &>/dev/null
 
     echo "cleaning up ..."
     rm -rf $1* 2>/dev/null
 
-    extract "$TARBALL_DIR/$1-$2.tar.gz" 1
+    extract "$TARBALL_DIR/$1-$2.tar.xz" 1
 
     pushd $1*$2* &>/dev/null
     mkdir -p build

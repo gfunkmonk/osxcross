@@ -7,9 +7,20 @@
 
 VERSION=1.5
 
-TAPI_VERSION="1300.6.5"
-CCTOOLS_VERSION="986"
-LINKER_VERSION="711"
+if ! arch_supported x86_64h; then
+  # https://github.com/tpoechtrager/apple-libtapi/issues/32#issuecomment-2870102119
+  TAPI_VERSION=1600.0.11.8
+  TAPIGIT="https://github.com/tpoechtrager"
+else
+  TAPI_VERSION=1300.6.5
+  TAPIGIT="https://github.com/earthlings-dev"
+fi
+
+#CCTOOLS_VERSION="986"
+#LINKER_VERSION="711"
+
+CCTOOLS_VERSION=1030.6.3
+LINKER_VERSION=956.6
 
 pushd "${0%/*}" &>/dev/null
 
@@ -136,10 +147,29 @@ build_xar
 
 # XAR END
 
+
+## Apple Dispatch/Blocks library ##
+
+if [ $NEED_TAPI_SUPPORT -eq 1 ]; then
+  get_sources https://github.com/tpoechtrager/apple-libdispatch.git main
+
+  if [ $f_res -eq 1 ]; then
+    pushd $CURRENT_BUILD_PROJECT_NAME &>/dev/null
+    mkdir -p build
+    pushd build &>/dev/null
+    cmake .. -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=$TARGET_DIR
+    $MAKE install -j$JOBS
+    popd &>/dev/null
+    popd &>/dev/null
+    build_success
+  fi
+fi
+
 ## Apple TAPI Library ##
 
 if [ $NEED_TAPI_SUPPORT -eq 1 ]; then
-  get_sources https://github.com/tpoechtrager/apple-libtapi.git "$TAPI_VERSION"
+  #get_sources https://github.com/tpoechtrager/apple-libtapi.git "$TAPI_VERSION"
+  get_sources ${TAPIGIT}/apple-libtapi.git "$TAPI_VERSION"
 
   if [ $f_res -eq 1 ]; then
     pushd $CURRENT_BUILD_PROJECT_NAME &>/dev/null
@@ -151,8 +181,9 @@ if [ $NEED_TAPI_SUPPORT -eq 1 ]; then
 fi
 
 ## cctools and ld64 ##
+#  https://github.com/tpoechtrager/cctools-port.git \
 get_sources \
-  https://github.com/tpoechtrager/cctools-port.git \
+  https://github.com/earthlings-dev/cctools-port.git \
   $CCTOOLS_VERSION-ld64-$LINKER_VERSION
 
 if [ $f_res -eq 1 ]; then
@@ -160,6 +191,8 @@ if [ $f_res -eq 1 ]; then
   echo ""
 
   CONFFLAGS="--prefix=$TARGET_DIR --target=$(first_supported_arch)-apple-$TARGET "
+  CONFFLAGS+="--with-libdispatch=$TARGET_DIR "
+  CONFFLAGS+="--with-libblocksruntime=$TARGET_DIR "
   if [ $NEED_TAPI_SUPPORT -eq 1 ]; then
     CONFFLAGS+="--with-libtapi=$TARGET_DIR "
   fi

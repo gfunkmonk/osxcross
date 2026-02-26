@@ -7,19 +7,13 @@ on:
       freespace:
         description: 'Clear Disk Space'
         required: true
-        type: choice
-        default: no
-        options:
-          - no
-          - yes
+        type: boolean
+        default: false
       swapspace:
         description: 'Add Swap File'
         required: true
-        type: choice
-        default: no
-        options:
-          - no
-          - yes
+        type: boolean
+        default: false
       sdk_14:
         description: 'Build macOS 14 SDKs'
         required: false

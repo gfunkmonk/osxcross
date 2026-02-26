@@ -128,7 +128,7 @@ jobs:
           echo "Architecture: $(uname -m)"
           # Update package list and install dependencies
           export DEBIAN_FRONTEND=noninteractive
-          sudo apt-get update && apt-get install -y \
+          sudo apt-get update && sudo apt-get install -y \
             curl \
             wget \
             make \
@@ -263,7 +263,7 @@ jobs:
           echo "Architecture: $(uname -m)"
           # Update package list and install dependencies
           export DEBIAN_FRONTEND=noninteractive
-          sudo apt-get update && apt-get install -y \
+          sudo apt-get update && sudo apt-get install -y \
             curl \
             wget \
             make \

@@ -103,7 +103,7 @@ jobs:
           fi
 
           if [ "${{ inputs.sdk_26 }}" == "true" ]; then
-            for v in "26.0" "26.1" "26.2" "26.4"; do
+            for v in "26.0" "26.1" "26.2"; do
               SDK_VERSIONS="${SDK_VERSIONS}${SEPARATOR}\"${v}\""
               SEPARATOR=","
             done

@@ -4,6 +4,13 @@ name: Pre-build osxcross TEST
 on:
   workflow_dispatch:
     inputs:
+      dorelease:
+        description: Release?
+        type: choice
+        options:
+          - yes
+          - no
+        default: no
       sdk_10:
         description: 'Build macOS 10.x SDKs'
         required: false
@@ -162,3 +169,22 @@ jobs:
         with:
           name: osxcross-linux-x86-64-${{ matrix.version }}
           path: osxcross-${{ matrix.version }}.tar.xz
+
+  release-osxcross:
+    name: (Draft-)Release
+    #if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    if: ${{ inputs.dorelease }}
+    runs-on: ubuntu-latest
+    needs: build-linux-x86-64
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: osxcross-linux-x86-64-${{ matrix.version }}
+      - name: Publish Release Draft
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: osxcross-${{ matrix.version }}.tar.xz
+          tag_name: ${{ env.RELEASE_TAG }}
+          fail_on_unmatched_files: true

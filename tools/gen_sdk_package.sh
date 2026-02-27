@@ -5,19 +5,14 @@
 
 export LC_ALL=C
 
-command -v gnutar &>/dev/null
-
-if [ $? -eq 0 ]; then
+if command -v gnutar &>/dev/null; then
   TAR=gnutar
 else
   TAR=tar
 fi
 
-
 if [ -z "$SDK_COMPRESSOR" ]; then
-  command -v xz &>/dev/null
-
-  if [ $? -eq 0 ]; then
+  if command -v xz &>/dev/null; then
     SDK_COMPRESSOR=xz
     SDK_EXT="tar.xz"
   else

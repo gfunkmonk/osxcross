@@ -134,7 +134,7 @@ build_xar
 
 ## Apple Dispatch/Blocks library ##
 
-if [ $NEED_TAPI_SUPPORT -eq 1 ]; then
+#if [ $NEED_TAPI_SUPPORT -eq 1 ]; then
   get_sources https://github.com/tpoechtrager/apple-libdispatch.git main
 
   if [ $f_res -eq 1 ]; then
@@ -147,7 +147,7 @@ if [ $NEED_TAPI_SUPPORT -eq 1 ]; then
     popd &>/dev/null
     build_success
   fi
-fi
+#fi
 
 ## Apple TAPI Library ##
 

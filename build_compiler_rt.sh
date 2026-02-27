@@ -218,7 +218,7 @@ if [ $f_res -eq 1 ]; then
         [ -z "$tmp" ] && exit 1
         pushd $tmp &>/dev/null
 
-        for arch in $*; do
+        for arch in "$@"; do
           if echo "int main(){}" | xcrun clang -arch $arch -xc -o test - &>/dev/null; then
             rm test
             [ -n "$ARCHS" ] && ARCHS+=" "
@@ -269,7 +269,8 @@ if [ $f_res -eq 1 ]; then
 
       arch1=$(echo $ARCHS | awk '{print $1}')
 
-      for file in $(ls build_$arch1/lib/darwin/); do
+      for file in build_"$arch1"/lib/darwin/*; do
+        file="${file##*/}"
         libs=""
 
         for arch in $ARCHS; do
@@ -337,7 +338,7 @@ function print_or_run() {
   if [ -z "$ENABLE_COMPILER_RT_INSTALL" ]; then
     echo "$@"
   else
-    $@
+    "$@"
   fi
 }
 

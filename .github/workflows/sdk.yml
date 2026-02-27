@@ -81,7 +81,7 @@ jobs:
         macos_versions: ${{ fromJSON(needs.determine_sdks.outputs.sdk_versions) }}
     runs-on: macos-${{ matrix.macos_versions }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - name: Cache SDK packages
         id: cache-sdk-packages
         uses: actions/cache/restore@v4

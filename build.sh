@@ -178,7 +178,6 @@ CCTOOLS_VERSION=986
 LINKER_VERSION=711
 
 get_sources \
-  #https://github.com/tpoechtrager/cctools-port.git \
   https://github.com/earthlings-dev/cctools-port.git \
   $CCTOOLS_VERSION-ld64-$LINKER_VERSION
 

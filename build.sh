@@ -151,12 +151,13 @@ fi
 ## Apple TAPI Library ##
 
 if [ $NEED_TAPI_SUPPORT -eq 1 ]; then
-  if ! arch_supported x86_64h; then
+  #if ! arch_supported x86_64h; then
     # https://github.com/tpoechtrager/apple-libtapi/issues/32#issuecomment-2870102119
-    TAPI_VERSION=1600.0.11.8
-  else
-    TAPI_VERSION=1300.6.5
-  fi
+  #  TAPI_VERSION=1600.0.11.8
+  #else
+  #  TAPI_VERSION=1300.6.5
+  #fi
+  TAPI_VERSION=1600.0.11.8
 
   get_sources https://github.com/tpoechtrager/apple-libtapi.git "${TAPI_VERSION}"
 
@@ -175,7 +176,7 @@ CCTOOLS_VERSION=1030.6.3
 LINKER_VERSION=956.6
 
 get_sources \
-  https://github.com/Un1q32/cctools-port.git \
+  https://github.com/tpoechtrager/cctools-port.git \
   $CCTOOLS_VERSION-ld64-$LINKER_VERSION
 
 if [ $f_res -eq 1 ]; then

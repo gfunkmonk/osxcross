@@ -118,7 +118,7 @@ jobs:
       - name: Build Apple Clang
         if: steps.cache-apple-clang.outputs.cache-hit != 'true'
         run: |
-          echo "Building Apple Clang for Ubuntu $1"
+          echo "Building Apple Clang for Ubuntu ${{ matrix.ubuntu_version }}"
           echo "Architecture: $(uname -m)"
           # Update package list and install dependencies
           export DEBIAN_FRONTEND=noninteractive
@@ -166,9 +166,9 @@ jobs:
           # Create distribution package
           sudo mkdir -p dist
           if [ "$(uname -m)" = "x86_64" ] || [ "$(uname -m)" = "amd64" ]; then
-            sudo tar -zcf dist/apple-clang-21-linux-x86_64-gnu-ubuntu-$1.tar.gz -C $INSTALLPREFIX .
+            sudo tar -zcf dist/apple-clang-21-linux-x86_64-gnu-ubuntu-${{ matrix.ubuntu_version }}.tar.gz -C $INSTALLPREFIX .
           elif [ "$(uname -m)" = "aarch64" ] || [ "$(uname -m)" = "arm64" ]; then
-            sudo tar -zcf dist/apple-clang-21-linux-aarch64-gnu-ubuntu-$1.tar.gz -C $INSTALLPREFIX .
+            sudo tar -zcf dist/apple-clang-21-linux-aarch64-gnu-ubuntu-${{ matrix.ubuntu_version }}.tar.gz -C $INSTALLPREFIX .
           else
             echo "Unsupported architecture: $(uname -m)"
             exit 1
@@ -252,8 +252,9 @@ jobs:
           restore-keys: |
             osxcross-ubuntu-${{ matrix.sdk_versions }}-${{ matrix.runs-on }}
       - name: Run build script
+        if: steps.cache-osxcross.outputs.cache-hit != 'true'
         run: |
-          echo "Building osxcross for Ubuntu $1 with SDK $2"
+          echo "Building osxcross for Ubuntu ${{ matrix.ubuntu_version }} with SDK ${{ matrix.sdk_versions }}"
           echo "Architecture: $(uname -m)"
           # Update package list and install dependencies
           export DEBIAN_FRONTEND=noninteractive
@@ -286,7 +287,7 @@ jobs:
           CLANG_DIR=$TARGET_DIR/clang
           sudo mkdir -p $CLANG_DIR
           # Extract and setup Apple Clang
-          tar -xzf /osxcross/apple-clang/*.tar.gz -C $CLANG_DIR
+          tar -xzf apple-clang/*.tar.gz -C $CLANG_DIR
           export PATH=$CLANG_DIR/bin:$PATH
           # Download and install CMake
           sudo mkdir -p /cmake
@@ -302,13 +303,13 @@ jobs:
           # Build osxcross
           export IPHONEOS_DEPLOYMENT_TARGET="5.0"
 
-          UNATTENDED=1 SDK_VERSION="$(echo $2 | sed 's/-/./g')" JOBS=$(nproc) bash ./build.sh
+          UNATTENDED=1 SDK_VERSION="$(echo ${{ matrix.sdk_versions }} | sed 's/-/./g')" JOBS=$(nproc) bash ./build.sh
           # Create distribution package
           mkdir -p dist
           if [ "$(uname -m)" = "x86_64" ] || [ "$(uname -m)" = "amd64" ]; then
-            tar -zcf dist/osxcross-$2-linux-x86_64-gnu-ubuntu-$1.tar.gz -C $TARGET_DIR .
+            tar -zcf dist/osxcross-${{ matrix.sdk_versions }}-linux-x86_64-gnu-ubuntu-${{ matrix.ubuntu_version }}.tar.gz -C $TARGET_DIR .
           elif [ "$(uname -m)" = "aarch64" ] || [ "$(uname -m)" = "arm64" ]; then
-            tar -zcf dist/osxcross-$2-linux-aarch64-gnu-ubuntu-$1.tar.gz -C $TARGET_DIR .
+            tar -zcf dist/osxcross-${{ matrix.sdk_versions }}-linux-aarch64-gnu-ubuntu-${{ matrix.ubuntu_version }}.tar.gz -C $TARGET_DIR .
           else
             echo "Unsupported architecture: $(uname -m)"
             exit 1

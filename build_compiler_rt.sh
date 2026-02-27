@@ -63,7 +63,7 @@ case $CLANG_VERSION in
   21.* ) BRANCH=release/21.x;    USE_CMAKE=1; ;;
   22.* ) BRANCH=release/22.x;    USE_CMAKE=1; ;;
   23.* ) BRANCH=main;            USE_CMAKE=1; ;;
-     * ) echo "Unsupported Clang version, must be >= 3.2 and <= 22.x" 1>&2; exit 1;
+     * ) echo "Unsupported Clang version, must be >= 3.2 and <= 23.x" 1>&2; exit 1;
 esac
 
 if [ $(osxcross-cmp $CLANG_VERSION ">=" 3.5) -eq 1 ]; then

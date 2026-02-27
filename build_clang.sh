@@ -19,7 +19,7 @@ mkdir -p $BUILD_DIR
 source $BASE_DIR/tools/trap_exit.sh
 
 if [ -z "$CLANG_VERSION" ]; then
-  CLANG_VERSION=21.1.1
+  CLANG_VERSION=22.1.0
 fi
 
 if [ -z "$INSTALLPREFIX" ]; then
@@ -66,6 +66,11 @@ function set_package_link()
     case ${CLANG_VERSION_PARTS[0]} in
       next) 
         CLANG_LLVM_PKG="https://github.com/swiftlang/llvm-project/archive/refs/heads/next.zip"
+        APPLE_VERSION="20.0.0"
+        REPOSITORY_STRING="-2000.0.0.0-LLVM-23.0.0"
+        ;;
+      22) 
+        CLANG_LLVM_PKG="https://github.com/swiftlang/llvm-project/archive/refs/heads/stable/22.x.zip"
         APPLE_VERSION="19.0.0"
         REPOSITORY_STRING="-1900.0.0.0-LLVM-22.0.0"
         ;;

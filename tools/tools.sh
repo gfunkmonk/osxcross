@@ -300,7 +300,7 @@ function git_clone_repository
     return
   fi
 
-  local git_extra_opts=""
+  local git_extra_opts="--depth 1 "
 
   if [ -z "$FULL_CLONE" ]; then
     git_extra_opts="--depth 1 "

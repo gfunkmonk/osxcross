@@ -155,13 +155,11 @@ if [ $NEED_TAPI_SUPPORT -eq 1 ]; then
   if ! arch_supported x86_64h; then
     # https://github.com/tpoechtrager/apple-libtapi/issues/32#issuecomment-2870102119
     TAPI_VERSION=1600.0.11.8
-    TAPIGIT=https://github.com/tpoechtrager/apple-libtapi.git
   else
     TAPI_VERSION=1300.6.5
-    TAPIGIT=https://github.com/earthlings-dev/apple-libtapi.git
   fi
 
-  get_sources "${TAPIGIT}" "${TAPI_VERSION}"
+  get_sources https://github.com/tpoechtrager/apple-libtapi.git "${TAPI_VERSION}"
 
   if [ $f_res -eq 1 ]; then
     pushd $CURRENT_BUILD_PROJECT_NAME &>/dev/null

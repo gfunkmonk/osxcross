@@ -4,52 +4,124 @@ name: Pre-build osxcross TEST
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: macOS SDK Version
-        type: choice
-        options:
-          - 10.6
-          - 10.7
-          - 10.8
-          - 10.10
-          - 10.11
-          - 10.12
-          - 10.13
-          - 10.14
-          - 10.15
-          - 11.1
-          - 11.3
-          - 12.0
-          - 12.1
-          - 12.3
-          - 13.0
-          - 13.1
-          - 13.3
-          - 14.0
-          - 14.2
-          - 14.4
-          - 14.5
-          - 15.0
-          - 15.1
-          - 15.2
-          - 15.4
-          - 15.5
-          - 26.0
-          - 26.1
-          - 26.2
-          - 26.4
-        default: 10.13
-env:
-  sdk_dl_url: https://github.com/gfunkmonk/macOS-SDK/releases/download/v1.0/MacOSX${{inputs.version }}.sdk.tar.xz
+      sdk_10:
+        description: 'Build macOS 10.x SDKs'
+        required: false
+        type: boolean
+        default: false
+      sdk_11:
+        description: 'Build macOS 11.x SDKs'
+        required: false
+        type: boolean
+        default: false
+      sdk_12:
+        description: 'Build macOS 12.x SDKs'
+        required: false
+        type: boolean
+        default: false
+      sdk_13:
+        description: 'Build macOS 13.x SDKs'
+        required: false
+        type: boolean
+        default: false
+      sdk_14:
+        description: 'Build macOS 14.x SDKs'
+        required: false
+        type: boolean
+        default: true
+      sdk_15:
+        description: 'Build macOS 15.x SDKs'
+        required: false
+        type: boolean
+        default: true
+      sdk_26:
+        description: 'Build macOS 26.x SDKs'
+        required: false
+        type: boolean
+        default: true
 jobs:
+  determine_sdks:
+    name: Determine SDK Versions
+    runs-on: ubuntu-latest
+    permissions: {}
+    outputs:
+      sdk_versions: ${{ steps.set_matrix.outputs.sdk_versions }}
+    steps:
+      - name: Set SDK matrix
+        id: set_matrix
+        run: |
+          SDK_VERSIONS="["
+          SEPARATOR=""
+
+          if [ "${{ inputs.sdk_10 }}" == "true" ]; then
+            for v in "10.6" "10.7" "10.8" "10.10" "10.11" "10.12" "10.13" "10.14" "10.15"; do
+              SDK_VERSIONS="${SDK_VERSIONS}${SEPARATOR}\"${v}\""
+              SEPARATOR=","
+            done
+          fi
+
+          if [ "${{ inputs.sdk_11 }}" == "true" ]; then
+            for v in "11.1" "11.3"; do
+              SDK_VERSIONS="${SDK_VERSIONS}${SEPARATOR}\"${v}\""
+              SEPARATOR=","
+            done
+          fi
+
+          if [ "${{ inputs.sdk_12 }}" == "true" ]; then
+            for v in "12.0" "12.1" "12.3"; do
+              SDK_VERSIONS="${SDK_VERSIONS}${SEPARATOR}\"${v}\""
+              SEPARATOR=","
+            done
+          fi
+
+          if [ "${{ inputs.sdk_13 }}" == "true" ]; then
+            for v in "13.0" "13.1" "13.3"; do
+              SDK_VERSIONS="${SDK_VERSIONS}${SEPARATOR}\"${v}\""
+              SEPARATOR=","
+            done
+          fi
+
+          if [ "${{ inputs.sdk_14 }}" == "true" ]; then
+            for v in "14.0" "14.2" "14.4" "14.5"; do
+              SDK_VERSIONS="${SDK_VERSIONS}${SEPARATOR}\"${v}\""
+              SEPARATOR=","
+            done
+          fi
+
+          if [ "${{ inputs.sdk_15 }}" == "true" ]; then
+            for v in "15.0" "15.1" "15.2" "15.4" "15.5"; do
+              SDK_VERSIONS="${SDK_VERSIONS}${SEPARATOR}\"${v}\""
+              SEPARATOR=","
+            done
+          fi
+
+          if [ "${{ inputs.sdk_26 }}" == "true" ]; then
+            for v in "26.0" "26.1" "26.2" "26.4"; do
+              SDK_VERSIONS="${SDK_VERSIONS}${SEPARATOR}\"${v}\""
+              SEPARATOR=","
+            done
+          fi
+
+          SDK_VERSIONS="${SDK_VERSIONS}]"
+          echo "sdk_versions=${SDK_VERSIONS}" >> $GITHUB_OUTPUT
+          echo "Selected SDK versions: ${SDK_VERSIONS}"
   build-linux-x86-64:
+    name: Build ${{ matrix.version }}
+    needs: determine_sdks
+    if: needs.determine_sdks.outputs.sdk_versions != '[]'
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ${{ fromJSON(needs.determine_sdks.outputs.sdk_versions) }}
     runs-on: ubuntu-latest
     steps:
       - name: checkout code
         uses: actions/checkout@v6
       - name: download SDK
         run: |
-          wget -P tarballs ${{ env.sdk_dl_url }}
+          wget -P tarballs https://github.com/gfunkmonk/macOS-SDK/releases/download/v1.0/MacOSX${{ matrix.version }}.sdk.tar.xz
       - name: Setup ccache
         run: |
           # Setup CCACHE
@@ -83,10 +155,10 @@ jobs:
           UNATTENDED=1 TARGET_DIR=${{ github.workspace }}/osxcross JOBS=$(nproc) ./build.sh
       - name: archive osxcross
         run: |
-          tar -cvf osxcross-${{ inputs.version }}.tar osxcross
-          xz -9 osxcross-${{ inputs.version }}.tar
+          tar -cvf osxcross-${{ matrix.version }}.tar osxcross
+          xz -T0 -9 osxcross-${{ matrix.version }}.tar
       - name: upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: osxcross-linux-x86-64-${{ inputs.version }}
-          path: osxcross-${{ inputs.version }}.tar.xz
+          name: osxcross-linux-x86-64-${{ matrix.version }}
+          path: osxcross-${{ matrix.version }}.tar.xz

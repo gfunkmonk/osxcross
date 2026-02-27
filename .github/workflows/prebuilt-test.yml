@@ -156,7 +156,7 @@ jobs:
       - name: archive osxcross
         run: |
           tar -cvf osxcross-${{ matrix.version }}.tar osxcross
-          xz -9 osxcross-${{ matrix.version }}.tar
+          xz -T0 -9 osxcross-${{ matrix.version }}.tar
       - name: upload artifact
         uses: actions/upload-artifact@v4
         with:

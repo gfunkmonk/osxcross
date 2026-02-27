@@ -31,9 +31,6 @@ if [ -z "$GITPROJECT" ]; then
   GITPROJECT="llvm"
 fi
 
-CLANG_VERSION_PARTS_B=(${CLANG_VERSION//./ })
-CLANG_VERSION_MAJOR=${CLANG_VERSION_PARTS_B[0]}
-unset CLANG_VERSION_PARTS_B
 
 require cmake
 require curl
@@ -62,7 +59,7 @@ function set_package_link()
     CLANG_LLVM_PKG="https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-$CLANG_VERSION.zip"
   elif [ $GITPROJECT == "apple" ]; then
     # with Apple LLVM we only get each major version as a stable branch so we just compare the input major version
-    CLANG_VERSION_PARTS=(${CLANG_VERSION//./ })
+    IFS='.' read -ra CLANG_VERSION_PARTS <<< "$CLANG_VERSION"
     case ${CLANG_VERSION_PARTS[0]} in
       next) 
         CLANG_LLVM_PKG="https://github.com/swiftlang/llvm-project/archive/refs/heads/next.zip"
@@ -254,7 +251,7 @@ function build()
 {
   local EXTRA_OPTIONS=()
   if [ $GITPROJECT == "apple" ]; then
-    APPLE_VERSION_ARRAY=(${APPLE_VERSION//./ })
+    IFS='.' read -ra APPLE_VERSION_ARRAY <<< "$APPLE_VERSION"
     EXTRA_OPTIONS+=(-DCLANG_VENDOR="Apple")
     EXTRA_OPTIONS+=(-DFLANG_VENDOR="Apple")
     EXTRA_OPTIONS+=(-DLLD_VENDOR="Apple")

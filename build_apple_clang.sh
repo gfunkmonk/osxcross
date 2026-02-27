@@ -2,7 +2,7 @@
 
 # Builds the Apple version of Clang/LLVM
 
-pushd "${0%/*}" &>/dev/null
+pushd "${0%/*}" &>/dev/null || exit
 
 if [ -z "$CLANG_VERSION" ]; then
   CLANG_VERSION=22

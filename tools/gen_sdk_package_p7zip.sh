@@ -46,11 +46,11 @@ $TARGET_DIR_SDK_TOOLS/bin/7z x \
   "*/Xcode*.app/Contents/Developer/Platforms/MacOSX.platform" \
   "*/Xcode*.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain"
 
-[ $? -ne 0 -a $? -ne 2 ] && exit 1
+rc=$?; [ $rc -ne 0 ] && [ $rc -ne 2 ] && exit 1
 
 if [ -z "$(ls -A)" ]; then
   $TARGET_DIR_SDK_TOOLS/bin/7z x $XCODEDMG "*/Packages/MacOSX*.pkg"
-  [ $? -ne 0 -a $? -ne 2 ] && exit 1
+  rc=$?; [ $rc -ne 0 ] && [ $rc -ne 2 ] && exit 1
 fi
 
 [ -z "$(ls -A)" ] && exit 1

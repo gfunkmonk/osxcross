@@ -83,13 +83,13 @@ FLAGS=""
 if [ -n "$BWPLATFORM" ]; then
   PLATFORM=$BWPLATFORM
 
-  if [ $PLATFORM = "Darwin" -a $(uname -s) != "Darwin" ]; then
+  if [ $PLATFORM = "Darwin" ] && [ "$(uname -s)" != "Darwin" ]; then
     CXX=$(xcrun -f clang++)
     #CXX=$(xcrun -f g++)
     FLAGS+="-fvisibility-inlines-hidden "
-  elif [ $PLATFORM = "FreeBSD" -a $(uname -s) != "FreeBSD" ]; then
+  elif [ $PLATFORM = "FreeBSD" ] && [ "$(uname -s)" != "FreeBSD" ]; then
     CXX=amd64-pc-freebsd13.0-clang++
-  elif [ $PLATFORM = "NetBSD" -a $(uname -s) != "NetBSD" ]; then
+  elif [ $PLATFORM = "NetBSD" ] && [ "$(uname -s)" != "NetBSD" ]; then
     CXX=amd64-pc-netbsd6.1.3-clang++
   fi
 

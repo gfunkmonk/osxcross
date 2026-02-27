@@ -98,7 +98,7 @@ if [ $(osxcross-cmp $SDK_VERSION '>=' 10.14) -eq 1 ] &&
     gcc/config/darwin-driver.c
   )
 
-  for file in ${files_to_patch[*]}; do
+  for file in "${files_to_patch[@]}"; do
     if [ -f $file ]; then
       echo "patching $PWD/$file"
       $SED -i 's/#include <sys\/sysctl.h>/#define _Atomic volatile\n#include <sys\/sysctl.h>\n#undef _Atomic/g' $file

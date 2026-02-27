@@ -51,9 +51,9 @@ function compress()
     "zip")
       $SDK_COMPRESSOR -q -6 -r - $1 > $2 ;;
     "xz")
-      tar cf - $1 | $SDK_COMPRESSOR -T0 -8 - > $2 ;;
+      $TAR cf - $1 | $SDK_COMPRESSOR -T0 -8 - > $2 ;;
     *)
-      tar cf - $1 | $SDK_COMPRESSOR -6 - > $2 ;;
+      $TAR cf - $1 | $SDK_COMPRESSOR -6 - > $2 ;;
   esac
 }
 
@@ -63,7 +63,8 @@ function rreadlink()
   if [ ! -h "$1" ]; then
     echo "$1"
   else
-    local link="$(expr "$(command ls -ld -- "$1")" : '.*-> \(.*\)$')"
+    local link
+    link="$(expr "$(command ls -ld -- "$1")" : '.*-> \(.*\)$')"
     cd $(dirname $1)
     rreadlink "$link" | sed "s|^\([^/].*\)\$|$(dirname $1)/\1|"
   fi
@@ -77,7 +78,8 @@ if [ -z "$XCODE_TOOLS" ]; then
 
   function set_xcode_dir()
   {
-    local tmp=$(ls $1 2>/dev/null | grep "^Xcode.*.app" | grep -v "beta" | head -n1)
+    local tmp
+    tmp=$(ls $1 2>/dev/null | grep "^Xcode.*.app" | grep -v "beta" | head -n1)
 
     if [ -z "$tmp" ]; then
       tmp=$(ls $1 2>/dev/null | grep "^Xcode.*.app" | head -n1)
@@ -136,19 +138,17 @@ if [ -z "$XCODE_TOOLS" ]; then
     elif [ -d "Packages" ]; then
       pushd "Packages" &>/dev/null
     else
-      if [ $? -ne 0 ]; then
-        echo "Xcode (or this script) is out of date" 1>&2
-        echo "trying some magic to find the SDKs anyway ..." 1>&2
+      echo "Xcode (or this script) is out of date" 1>&2
+      echo "trying some magic to find the SDKs anyway ..." 1>&2
 
-        SDKDIR=$(find . -name SDKs -type d | grep MacOSX | head -n1)
+      SDKDIR=$(find . -name SDKs -type d | grep MacOSX | head -n1)
 
-        if [ -z "$SDKDIR" ]; then
-          echo "cannot find SDKs!" 1>&2
-          exit 1
-        fi
-
-        pushd "$SDKDIR" &>/dev/null
+      if [ -z "$SDKDIR" ]; then
+        echo "cannot find SDKs!" 1>&2
+        exit 1
       fi
+
+      pushd "$SDKDIR" &>/dev/null
     fi
   fi
 
@@ -202,7 +202,7 @@ for pat in MacOS[0-9]*.sdk MacOSX[0-9]*.sdk; do
 done
 
 
-if [ -z "$SDKS" ]; then
+if [ ${#SDKS[@]} -eq 0 ]; then
   echo "No SDK found" 1>&2
   exit 1
 fi

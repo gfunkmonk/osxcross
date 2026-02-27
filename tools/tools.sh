@@ -42,7 +42,6 @@ set_path_vars
 
 PLATFORM=$(uname -s)
 ARCH=$(uname -m)
-OPERATING_SYSTEM=$(uname -o 2>/dev/null || echo "-")
 SCRIPT=$(basename $0)
 
 if [[ $PLATFORM == CYGWIN* ]]; then
@@ -76,11 +75,11 @@ function require()
 }
 
 if [[ $PLATFORM == *BSD ]] || [ $PLATFORM == "DragonFly" ]; then
-  MAKE=gmake
-  SED=gsed
+  MAKE="gmake"
+  SED="gsed"
 else
-  MAKE=make
-  SED=sed
+  MAKE="make"
+  SED="sed"
 fi
 
 if [ -z "$USESYSTEMCOMPILER" ]; then
@@ -143,10 +142,8 @@ fi
 # find sdk version to use
 function guess_sdk_version()
 {
-  tmp1=
   tmp2=
   tmp3=
-  file=
   sdk=
   guess_sdk_version_result=
   sdkcount=$(find -L tarballs/ -type f | grep MacOSX | wc -l)
@@ -225,7 +222,8 @@ function extract()
 
 function get_exec_dir()
 {
-  local dirs=$(dirs)
+  local dirs
+  dirs=$(dirs)
   echo ${dirs##* }
 }
 
@@ -324,7 +322,8 @@ function git_clone_repository
   git checkout $branch
   git pull origin $branch
 
-  local new_hash=$(git rev-parse HEAD)
+  local new_hash
+  new_hash=$(git rev-parse HEAD)
   local old_hash=""
   local hash_file="$BUILD_DIR/.${project_name}_git_hash"
 
@@ -419,7 +418,8 @@ function get_sources()
 function download()
 {
   local uri=$1
-  local filename=$(basename $1)
+  local filename
+  filename=$(basename $1)
 
   if command -v curl &>/dev/null; then
     ## cURL ##
@@ -428,7 +428,8 @@ function download()
   elif command -v wget &>/dev/null; then
     ## wget ##
     local wget_opts="-c "
-    local output=$(wget --no-config 2>&1)
+    local output
+    output=$(wget --no-config 2>&1)
     if [[ $output != *--no-config* ]]; then
       wget_opts+="--no-config "
     fi

@@ -84,7 +84,7 @@ fi
 
 # Minimum targeted macOS version
 # Must be <= SDK_VERSION
-if [ -n "$OSX_VERSION_MIN_INT" -a -z "$OSX_VERSION_MIN" ]; then
+if [ -n "$OSX_VERSION_MIN_INT" ] && [ -z "$OSX_VERSION_MIN" ]; then
   OSX_VERSION_MIN=$OSX_VERSION_MIN_INT
 fi
 
@@ -203,11 +203,12 @@ fi
 ## Create Arch Symlinks ##
 
 pushd $TARGET_DIR/bin &>/dev/null
-TOOLS=($(find . -name "$(first_supported_arch)-apple-${TARGET}*"))
+mapfile -t TOOLS < <(find . -name "$(first_supported_arch)-apple-${TARGET}*")
 function create_arch_symlinks()
 {
   local arch=$1
-  local default_arch=$(first_supported_arch)
+  local default_arch
+  default_arch=$(first_supported_arch)
   # Target arch must not be the source arch.
   if [ "$arch" = "$default_arch" ]; then
     return

@@ -42,7 +42,7 @@ elif [[ $(uname -r) == *-WSL* ]]; then
   is_wsl=1
 fi
 
-if [ $is_ubuntu -eq 0 -a $is_wsl -eq 0 ]; then
+if [ $is_ubuntu -eq 0 ] && [ $is_wsl -eq 0 ]; then
   modinfo fuse &>/dev/null
 fi
 

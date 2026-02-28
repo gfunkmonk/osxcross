@@ -145,7 +145,7 @@ jobs:
           CCACHE_COMPRESSLEVEL=7
           CCACHE_INODECACHE=true
           CCACHE_NORECACHE=true
-          CCACHE_SLOPINESS=file_macro,locale,time_macros
+          CCACHE_SLOPPINESS=file_macro,locale,time_macros
           CCACHE_NOFILECLONE=true
           CCACHE_DIRECT=true
           CCACHE_DEPEND=true
@@ -157,6 +157,9 @@ jobs:
           update_packager_index: true
           install_ccache: true
           prepend_symlinks_to_path: true
+          ccache_options: |
+            max_size=10.0G
+          cache_key: ccache-osxcross-${{ matrix.version }}
       - name: build osxcross
         run: |
           UNATTENDED=1 TARGET_DIR=${{ github.workspace }}/osxcross JOBS=$(nproc) ./build.sh
@@ -173,7 +176,7 @@ jobs:
   release-osxcross:
     name: (Draft-)Release
     #if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
-    if: ${{ inputs.dorelease }}
+    if: ${{ inputs.dorelease == 'yes' }}
     runs-on: ubuntu-latest
     needs: build-linux-x86-64
     steps:

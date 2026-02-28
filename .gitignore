@@ -8,3 +8,5 @@ tarballs/*.tar.*
 tarballs/*.zip
 *.tar.*
 *.zip
+wrapper
+_codeql_detected_source_root

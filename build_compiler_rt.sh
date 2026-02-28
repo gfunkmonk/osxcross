@@ -98,7 +98,7 @@ pushd $BUILD_DIR &>/dev/null
 
 # Check if a build project for compiler-rt already exists.
 # Delete any directory that is called compiler-rt, but is not a build project.
-if [ -d "$BUILD_DIR/compiler-rt" ] && [ ! -d "$BUILD_DIR/compiler_rt/compiler-rt" ]; then
+if [ -d "$BUILD_DIR/compiler-rt" ] && [ ! -d "$BUILD_DIR/compiler-rt/compiler-rt" ]; then
     rm -rf "$BUILD_DIR/compiler-rt"
 fi
 

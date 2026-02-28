@@ -23,7 +23,7 @@ WARNFLAGS="-Wno-cast-function-type-mismatch -Wno-unused-but-set-variable \
 CFLAGS="${CFLAGS:-} -O2 -pipe -fomit-frame-pointer ${WARNFLAGS}"
 CXXFLAGS="${CXXFLAGS:-} -O2 -pipe -fomit-frame-pointer ${WARNFLAGS}"
 
-if [ $SDK_VERSION ]; then
+if [ -n "$SDK_VERSION" ]; then
   echo "SDK VERSION set in environment variable: $SDK_VERSION"
 else
   guess_sdk_version
@@ -121,13 +121,11 @@ echo ""
 
 export PATH=$TARGET_DIR/bin:$PATH
 
-mkdir -p $BUILD_DIR
-mkdir -p $TARGET_DIR
-mkdir -p $SDK_DIR
+mkdir -p "$BUILD_DIR" "$TARGET_DIR" "$SDK_DIR"
 
 source $BASE_DIR/tools/trap_exit.sh
 
-pushd $BUILD_DIR &>/dev/null
+pushd "$BUILD_DIR" &>/dev/null
 
 
 

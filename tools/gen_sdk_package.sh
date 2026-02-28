@@ -75,10 +75,11 @@ if [ -z "$XCODE_TOOLS" ]; then
   function set_xcode_dir()
   {
     local tmp
-    tmp=$(ls $1 2>/dev/null | grep "^Xcode.*.app" | grep -v "beta" | head -n1)
+    # Use glob pattern instead of ls | grep
+    tmp=$(find "$1" -maxdepth 1 -name "Xcode*.app" ! -name "*beta*" 2>/dev/null | head -n1 | xargs -r basename)
 
     if [ -z "$tmp" ]; then
-      tmp=$(ls $1 2>/dev/null | grep "^Xcode.*.app" | head -n1)
+      tmp=$(find "$1" -maxdepth 1 -name "Xcode*.app" 2>/dev/null | head -n1 | xargs -r basename)
     fi
 
     if [ -n "$tmp" ]; then
@@ -259,4 +260,5 @@ popd &>/dev/null
 popd &>/dev/null
 
 echo ""
-ls -lh | grep MacOSX
+# Use glob pattern instead of ls | grep
+ls -lh MacOSX*.sdk.* 2>/dev/null || echo "No MacOSX SDK files found"

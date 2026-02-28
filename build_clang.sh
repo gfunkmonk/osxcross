@@ -7,7 +7,7 @@
 # source tree.
 #
 
-pushd "${0%/*}" &>/dev/null
+pushd "${0%/*}" &>/dev/null || exit 1
 
 DESC=clang
 USESYSTEMCOMPILER=1
@@ -38,7 +38,7 @@ CLANG_LLVM_PKG=""
 
 function set_package_link()
 {
-  pushd "$TARBALL_DIR" &>/dev/null
+  pushd "$TARBALL_DIR" &>/dev/null || return 1
   
   # Official LLVM project download URLs look like:
   # https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-10.0.1.zip
@@ -154,7 +154,7 @@ function set_package_link()
     exit 1
   fi
 
-  popd &>/dev/null #$TARBALL_DIR
+  popd &>/dev/null || return 1 #$TARBALL_DIR
 }
 
 set_package_link
@@ -185,7 +185,7 @@ else
 fi
 
 # Download the GitHub repo as a ZIP file
-pushd "$TARBALL_DIR" &>/dev/null
+pushd "$TARBALL_DIR" &>/dev/null || exit 1
 
 if [[ "$GITPROJECT" == "apple" ]]; then
   # Resuming downloads of branch archives is not possible.
@@ -195,14 +195,14 @@ fi
 
 download "$CLANG_LLVM_PKG"
 
-popd &>/dev/null #$TARBALL_DIR
+popd &>/dev/null || exit 1 #$TARBALL_DIR
 
 # extract ZIP
-pushd "$BUILD_DIR" &>/dev/null
+pushd "$BUILD_DIR" &>/dev/null || exit 1
 
 rm -rf "clang-$CLANG_VERSION"
 mkdir "clang-$CLANG_VERSION"
-pushd "clang-$CLANG_VERSION" &>/dev/null
+pushd "clang-$CLANG_VERSION" &>/dev/null || exit 1
 
 echo "extracting ..."
 extract $TARBALL_DIR/$(basename $CLANG_LLVM_PKG)
@@ -210,11 +210,11 @@ extract $TARBALL_DIR/$(basename $CLANG_LLVM_PKG)
 # Various Buildfixes
 
 if [[ "$GITPROJECT" == "apple" ]]; then
-  pushd *llvm* &>/dev/null
+  pushd *llvm* &>/dev/null || exit 1
   # lld has been broken by this PR:
   # https://github.com/swiftlang/llvm-project/pull/8119
   patch -p1 < $PATCH_DIR/unbreak-apple-lld.patch || true
-  popd &>/dev/null
+  popd &>/dev/null || exit 1
 fi
 
 if ([[ $CLANG_VERSION == 18* ]] || [[ $CLANG_VERSION == 17* ]] ||
@@ -269,7 +269,7 @@ function build()
   fi
   stage=$1
   mkdir -p $stage
-  pushd $stage &>/dev/null
+  pushd "$stage" &>/dev/null || exit 1
   cmake ../*llvm*/llvm \
     -DCMAKE_INSTALL_PREFIX=$INSTALLPREFIX \
     -DCMAKE_BUILD_TYPE=Release \
@@ -285,7 +285,7 @@ function build()
     -DLLVM_TARGETS_TO_BUILD="X86;AArch64;ARM" \
     -DLLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN=1
   $MAKE $2 -j $JOBS
-  popd &>/dev/null
+  popd &>/dev/null || exit 1
 }
 
 export CFLAGS=""

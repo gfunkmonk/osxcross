@@ -11,6 +11,10 @@ pushd "${0%/*}" &>/dev/null
 
 source tools/tools.sh
 
+TAPI_VERSION=1300.6.5
+CCTOOLS_VERSION=986
+LINKER_VERSION=711
+
 if [ $SDK_VERSION ]; then
   echo "SDK VERSION set in environment variable: $SDK_VERSION"
 else
@@ -68,7 +72,7 @@ case $SDK_VERSION in
   26|26.0*) TARGET=darwin25;   SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.13 ;;
   26.1*) TARGET=darwin25.1;   SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.13 ;;
   26.2*) TARGET=darwin25.2;   SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.13 ;;
-  26.4*) TARGET=darwin25.3;   SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=11.0 ;;
+  26.4*) TARGET=darwin25.4;   SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=11.0 ;;
   *) echo "Unsupported SDK"; exit 1 ;;
 esac
 
@@ -133,31 +137,9 @@ build_xar
 
 # XAR END
 
-## Apple Dispatch/Blocks library ##
-
-#get_sources https://github.com/tpoechtrager/apple-libdispatch.git main
-
-#if [ $f_res -eq 1 ]; then
-#  pushd $CURRENT_BUILD_PROJECT_NAME &>/dev/null
-#  mkdir -p build
-#  pushd build &>/dev/null
-#  cmake .. -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=$TARGET_DIR
-#  $MAKE install -j$JOBS
-#  popd &>/dev/null
-#  popd &>/dev/null
-#  build_success
-#fi
-
 ## Apple TAPI Library ##
 
 if [ $NEED_TAPI_SUPPORT -eq 1 ]; then
-  #if ! arch_supported x86_64h; then
-    # https://github.com/tpoechtrager/apple-libtapi/issues/32#issuecomment-2870102119
-  #  TAPI_VERSION=1600.0.11.8
-  #else
-  #  TAPI_VERSION=1300.6.5
-  #fi
-  TAPI_VERSION=1300.6.5
 
   get_sources https://github.com/tpoechtrager/apple-libtapi.git "${TAPI_VERSION}"
 
@@ -172,11 +154,6 @@ fi
 
 ## cctools and ld64 ##
 
-#CCTOOLS_VERSION=1030.6.3
-#LINKER_VERSION=956.6
-CCTOOLS_VERSION=986
-LINKER_VERSION=711
-
 get_sources \
   https://github.com/tpoechtrager/cctools-port.git \
   $CCTOOLS_VERSION-ld64-$LINKER_VERSION
@@ -186,8 +163,6 @@ if [ $f_res -eq 1 ]; then
   echo ""
 
   CONFFLAGS="--prefix=$TARGET_DIR --target=$(first_supported_arch)-apple-$TARGET "
-  #CONFFLAGS+="--with-libdispatch=$TARGET_DIR "
-  #CONFFLAGS+="--with-libblocksruntime=$TARGET_DIR "
   if [ $NEED_TAPI_SUPPORT -eq 1 ]; then
     CONFFLAGS+="--with-libtapi=$TARGET_DIR "
   fi

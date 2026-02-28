@@ -896,38 +896,36 @@ bool Target::setup() {
     case Arch::i586:
     case Arch::i686:
       is32bit = true;
-      // falls through
+      break;
     case Arch::arm64:
-      isArm = true;
-      // falls through
     case Arch::arm64e:
       isArm = true;
-      // falls through
+      break;
     case Arch::x86_64:
     case Arch::x86_64h:
-      if (isGCC()) {
-        if (arch != Arch::x86_64 && arch != Arch::i386) {
-          err << "gcc does not support architecture '" << getArchName(arch)
-              << "'" << err.endl();
-          return false;
-        }
-
-        if (targetarchs.size() > 1)
-          break;
-
-        if (!isArm)
-          fargs.push_back(is32bit ? "-m32" : "-m64");
-      } else if (isClang()) {
-        if (usegcclibs && targetarchs.size() > 1)
-          break;
-        fargs.push_back("-arch");
-        fargs.push_back(getArchName(arch));
-      }
       break;
     default:
       err << "unsupported architecture: '" << getArchName(arch) << "'"
           << err.endl();
       return false;
+    }
+    if (isGCC()) {
+      if (arch != Arch::x86_64 && arch != Arch::i386) {
+        err << "gcc does not support architecture '" << getArchName(arch)
+            << "'" << err.endl();
+        return false;
+      }
+
+      if (targetarchs.size() > 1)
+        continue;
+
+      if (!isArm)
+        fargs.push_back(is32bit ? "-m32" : "-m64");
+    } else if (isClang()) {
+      if (usegcclibs && targetarchs.size() > 1)
+        continue;
+      fargs.push_back("-arch");
+      fargs.push_back(getArchName(arch));
     }
   }
 

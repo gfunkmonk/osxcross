@@ -23,7 +23,7 @@ WARNFLAGS="-Wno-cast-function-type-mismatch -Wno-unused-but-set-variable \
 CFLAGS="${CFLAGS:-} -O2 -pipe -fomit-frame-pointer ${WARNFLAGS}"
 CXXFLAGS="${CXXFLAGS:-} -O2 -pipe -fomit-frame-pointer ${WARNFLAGS}"
 
-if [ $SDK_VERSION ]; then
+if [ -n "$SDK_VERSION" ]; then
   echo "SDK VERSION set in environment variable: $SDK_VERSION"
 else
   guess_sdk_version

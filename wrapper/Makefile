@@ -11,7 +11,7 @@ ADDITIONAL_CXXFLAGS ?=
 
 override CXXFLAGS=-std=c++0x -Wall -Wextra
 override CXXFLAGS+=-Wno-missing-field-initializers
-override CXXFLAGS+=-I. -O$(OPTIMIZE)
+override CXXFLAGS+=-I. -O$(OPTIMIZE) -MMD -MP
 
 ifeq ($(LTO), 1)
   override CXXFLAGS+=-flto
@@ -80,6 +80,6 @@ wrapper: $(OBJS)
 .PHONY: clean
 
 clean:
-	rm -f $(BIN) $(OBJS)
+	rm -f $(BIN) $(OBJS) $(OBJS:.o=.d)
 
 -include $(SRCS:cpp=d)

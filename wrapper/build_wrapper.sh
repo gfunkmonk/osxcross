@@ -39,7 +39,9 @@ function create_wrapper_link
     verbose_cmd create_symlink "${TARGETTRIPLE}-wrapper" "i386-apple-${TARGET}-${1}"
   fi
 
-  verbose_cmd create_symlink "${TARGETTRIPLE}-wrapper" "x86_64-apple-${TARGET}-${1}"
+  if arch_supported x86_64; then
+    verbose_cmd create_symlink "${TARGETTRIPLE}-wrapper" "x86_64-apple-${TARGET}-${1}"
+  fi
 
   if ([[ $1 != gcc* ]] && [[ $1 != g++* ]] && [[ $1 != *gstdc++ ]]); then
     if arch_supported x86_64h; then
@@ -49,6 +51,9 @@ function create_wrapper_link
     if arch_supported arm64; then
       verbose_cmd create_symlink "${TARGETTRIPLE}-wrapper" "aarch64-apple-${TARGET}-${1}"
       verbose_cmd create_symlink "${TARGETTRIPLE}-wrapper" "arm64-apple-${TARGET}-${1}"
+    fi
+
+    if arch_supported arm64e; then
       verbose_cmd create_symlink "${TARGETTRIPLE}-wrapper" "arm64e-apple-${TARGET}-${1}"
     fi
   fi
@@ -69,6 +74,9 @@ function create_wrapper_link
 
     if arch_supported arm64; then
       verbose_cmd create_symlink "${TARGETTRIPLE}-wrapper" "oa64-${1}"
+    fi
+
+    if arch_supported arm64e; then
       verbose_cmd create_symlink "${TARGETTRIPLE}-wrapper" "oa64e-${1}"
     fi
   fi

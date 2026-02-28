@@ -23,7 +23,7 @@ WARNFLAGS="-Wno-cast-function-type-mismatch -Wno-unused-but-set-variable \
 CFLAGS="${CFLAGS:-} -O2 -pipe -fomit-frame-pointer ${WARNFLAGS}"
 CXXFLAGS="${CXXFLAGS:-} -O2 -pipe -fomit-frame-pointer ${WARNFLAGS}"
 
-if [ $SDK_VERSION ]; then
+if [ -n "$SDK_VERSION" ]; then
   echo "SDK VERSION set in environment variable: $SDK_VERSION"
 else
   guess_sdk_version
@@ -80,6 +80,7 @@ case $SDK_VERSION in
   26|26.0*) TARGET=darwin25;   SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.13 ;;
   26.1*) TARGET=darwin25.1;   SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.13 ;;
   26.2*) TARGET=darwin25.2;   SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.13 ;;
+  26.3*) TARGET=darwin25.3;   SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.13 ;;
   26.4*) TARGET=darwin25.4;   SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=11.0 ;;
   *) echo "Unsupported SDK"; exit 1 ;;
 esac
@@ -153,7 +154,7 @@ if [ $f_res -eq 1 ]; then
   pushd $CURRENT_BUILD_PROJECT_NAME &>/dev/null
   mkdir -p build
   pushd build &>/dev/null
-  cmake .. -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=$TARGET_DIR
+  $CMAKE .. -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=$TARGET_DIR
   $MAKE install -j$JOBS
   popd &>/dev/null
   popd &>/dev/null

@@ -53,10 +53,10 @@ function set_package_link()
   # apple/stable/20190104 = 8
   # apple/stable/20180801 = 7
   
-  if [ $GITPROJECT == "llvm" ]; then
+  if [[ "$GITPROJECT" == "llvm" ]]; then
     # with official LLVM we just pass the version straight into the URL
     CLANG_LLVM_PKG="https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-$CLANG_VERSION.zip"
-  elif [ $GITPROJECT == "apple" ]; then
+  elif [[ "$GITPROJECT" == "apple" ]]; then
     # with Apple LLVM we only get each major version as a stable branch so we just compare the input major version
     IFS='.' read -ra CLANG_VERSION_PARTS <<< "$CLANG_VERSION"
     case ${CLANG_VERSION_PARTS[0]} in
@@ -187,7 +187,7 @@ fi
 # Download the GitHub repo as a ZIP file
 pushd $TARBALL_DIR &>/dev/null
 
-if [ $GITPROJECT == "apple" ]; then
+if [[ "$GITPROJECT" == "apple" ]]; then
   # Resuming downloads of branch archives is not possible.
   # Always download them newly.
   rm -f $(basename $CLANG_LLVM_PKG)
@@ -209,7 +209,7 @@ extract $TARBALL_DIR/$(basename $CLANG_LLVM_PKG)
 
 # Various Buildfixes
 
-if [ $GITPROJECT == "apple" ]; then
+if [[ "$GITPROJECT" == "apple" ]]; then
   pushd *llvm* &>/dev/null
   # lld has been broken by this PR:
   # https://github.com/swiftlang/llvm-project/pull/8119
@@ -249,7 +249,7 @@ fi
 function build()
 {
   local EXTRA_OPTIONS=()
-  if [ $GITPROJECT == "apple" ]; then
+  if [[ "$GITPROJECT" == "apple" ]]; then
     IFS='.' read -ra APPLE_VERSION_ARRAY <<< "$APPLE_VERSION"
     EXTRA_OPTIONS+=(-DCLANG_VENDOR="Apple")
     EXTRA_OPTIONS+=(-DFLANG_VENDOR="Apple")

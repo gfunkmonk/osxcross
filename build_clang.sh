@@ -288,8 +288,8 @@ function build()
   popd &>/dev/null
 }
 
-export CFLAGS=""
-export CXXFLAGS=""
+export CFLAGS=" -march=native"
+export CXXFLAGS=" -march=native"
 
 if [ -z "$PORTABLE" ]; then
   export CFLAGS+=" "

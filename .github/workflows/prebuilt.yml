@@ -4,10 +4,6 @@ name: Pre-build osxcross
 on:
   workflow_dispatch:
     inputs:
-      appleclang:
-        description: build Apple clang
-        type: boolean
-        default: true
       version:
         description: macOS SDK Version
         type: choice
@@ -41,7 +37,7 @@ on:
           - 26.0
           - 26.1
           - 26.2
-          - 26.4         
+          - 26.4
         default: 10.13
 env:
   sdk_dl_url: https://github.com/gfunkmonk/macOS-SDK/releases/download/v1.0/MacOSX${{inputs.version }}.sdk.tar.xz
@@ -69,7 +65,7 @@ jobs:
           CCACHE_COMPRESS=1
           CCACHE_COMPRESSLEVEL=7
           CCACHE_INODECACHE=true
-          CCACHE_RECACHE=false
+          CCACHE_NORECACHE=true
           CCACHE_SLOPINESS=file_macro,locale,time_macros
           CCACHE_NOFILECLONE=true
           CCACHE_DIRECT=true
@@ -82,10 +78,6 @@ jobs:
           update_packager_index: true
           install_ccache: true
           prepend_symlinks_to_path: true
-      - if: ${{ inputs.appleclang }}
-        name: Build Apple Clang
-        run: |
-          UNATTENDED=1 ENABLE_CLANG_INSTALL=1 PORTABLE=1 JOBS=$(nproc) TARGET_DIR=${{ github.workspace }}/osxcross bash ./build_apple_clang.sh
       - name: build osxcross
         run: |
           UNATTENDED=1 TARGET_DIR=${{ github.workspace }}/osxcross JOBS=$(nproc) ./build.sh

@@ -892,6 +892,16 @@ bool Target::setup() {
     bool is32bit = false;
     bool isArm = false;
 
+#ifndef __APPLE__
+    // x86_64h is binary-compatible with x86_64 (same CPU type, different
+    // subtype). Newer macOS SDK TBD files omit x86_64h as a separate arch,
+    // so pass x86_64 to the linker to allow it to find standard library
+    // symbols. The triple is already normalized to x86_64 for this reason.
+    const Arch clangArchFlag = (arch == Arch::x86_64h) ? Arch::x86_64 : arch;
+#else
+    const Arch clangArchFlag = arch;
+#endif
+
     switch (arch) {
     case Arch::i386:
     case Arch::i486:
@@ -923,15 +933,7 @@ bool Target::setup() {
         if (usegcclibs && targetarchs.size() > 1)
           break;
         fargs.push_back("-arch");
-#ifndef __APPLE__
-        // x86_64h is binary-compatible with x86_64 (same CPU type, different
-        // subtype). Newer macOS SDK TBD files omit x86_64h as a separate arch,
-        // so pass x86_64 to the linker to allow it to find standard library
-        // symbols. The triple is already normalized to x86_64 for this reason.
-        fargs.push_back(getArchName(arch == Arch::x86_64h ? Arch::x86_64 : arch));
-#else
-        fargs.push_back(getArchName(arch));
-#endif
+        fargs.push_back(getArchName(clangArchFlag));
       }
       break;
     default:

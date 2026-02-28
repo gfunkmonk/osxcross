@@ -125,7 +125,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
       - name: download SDK
         run: |
           wget -P tarballs https://github.com/gfunkmonk/macOS-SDK/releases/download/v1.0/MacOSX${{ matrix.version }}.sdk.tar.xz

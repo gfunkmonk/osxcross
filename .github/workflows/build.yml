@@ -57,49 +57,49 @@ jobs:
           SDK_VERSIONS="["
           SEPARATOR=""
 
-          if [ "${{ inputs.sdk_10 }}" == "true" ]; then
+          if ${{ inputs.sdk_10 }}; then
             for v in "10.6" "10.7" "10.8" "10.10" "10.11" "10.12" "10.13" "10.14" "10.15"; do
               SDK_VERSIONS="${SDK_VERSIONS}${SEPARATOR}\"${v}\""
               SEPARATOR=","
             done
           fi
 
-          if [ "${{ inputs.sdk_11 }}" == "true" ]; then
+          if ${{ inputs.sdk_11 }}; then
             for v in "11.1" "11.3"; do
               SDK_VERSIONS="${SDK_VERSIONS}${SEPARATOR}\"${v}\""
               SEPARATOR=","
             done
           fi
 
-          if [ "${{ inputs.sdk_12 }}" == "true" ]; then
+          if ${{ inputs.sdk_12 }}; then
             for v in "12.0" "12.1" "12.3"; do
               SDK_VERSIONS="${SDK_VERSIONS}${SEPARATOR}\"${v}\""
               SEPARATOR=","
             done
           fi
 
-          if [ "${{ inputs.sdk_13 }}" == "true" ]; then
+          if ${{ inputs.sdk_13 }}; then
             for v in "13.0" "13.1" "13.3"; do
               SDK_VERSIONS="${SDK_VERSIONS}${SEPARATOR}\"${v}\""
               SEPARATOR=","
             done
           fi
 
-          if [ "${{ inputs.sdk_14 }}" == "true" ]; then
+          if ${{ inputs.sdk_14 }}; then
             for v in "14.0" "14.2" "14.4" "14.5"; do
               SDK_VERSIONS="${SDK_VERSIONS}${SEPARATOR}\"${v}\""
               SEPARATOR=","
             done
           fi
 
-          if [ "${{ inputs.sdk_15 }}" == "true" ]; then
+          if ${{ inputs.sdk_15 }}; then
             for v in "15.0" "15.1" "15.2" "15.4" "15.5"; do
               SDK_VERSIONS="${SDK_VERSIONS}${SEPARATOR}\"${v}\""
               SEPARATOR=","
             done
           fi
 
-          if [ "${{ inputs.sdk_26 }}" == "true" ]; then
+          if ${{ inputs.sdk_26 }}; then
             for v in "26.0" "26.1" "26.2"; do
               SDK_VERSIONS="${SDK_VERSIONS}${SEPARATOR}\"${v}\""
               SEPARATOR=","

@@ -53,17 +53,17 @@ jobs:
           SDK_VERSIONS="["
           SEPARATOR=""
 
-          if [ "${{ inputs.sdk_14 }}" == "true" ]; then
+          if ${{ inputs.sdk_14 }}; then
             SDK_VERSIONS="${SDK_VERSIONS}${SEPARATOR}14"
             SEPARATOR=","
           fi
 
-          if [ "${{ inputs.sdk_15 }}" == "true" ]; then
+          if ${{ inputs.sdk_15 }}; then
             SDK_VERSIONS="${SDK_VERSIONS}${SEPARATOR}15"
             SEPARATOR=","
           fi
 
-          if [ "${{ inputs.sdk_26 }}" == "true" ]; then
+          if ${{ inputs.sdk_26 }}; then
             SDK_VERSIONS="${SDK_VERSIONS}${SEPARATOR}26"
             SEPARATOR=","
           fi

@@ -14,7 +14,7 @@ USESYSTEMCOMPILER=1
 
 source tools/tools.sh
 
-mkdir -p $BUILD_DIR
+mkdir -p "$BUILD_DIR"
 
 source $BASE_DIR/tools/trap_exit.sh
 
@@ -38,7 +38,7 @@ CLANG_LLVM_PKG=""
 
 function set_package_link()
 {
-  pushd $TARBALL_DIR &>/dev/null
+  pushd "$TARBALL_DIR" &>/dev/null
   
   # Official LLVM project download URLs look like:
   # https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-10.0.1.zip
@@ -149,7 +149,7 @@ function set_package_link()
   fi
   
   # after we generate the URL string above we need to actually check it works
-  if [ ! -f $(basename $CLANG_LLVM_PKG) ] && [ $(curl --head -L $CLANG_LLVM_PKG -o /dev/stderr -w "%{http_code}" 2> /dev/null) -ne 200 ]; then
+  if [ ! -f "$(basename "$CLANG_LLVM_PKG")" ] && [ "$(curl --head -L "$CLANG_LLVM_PKG" -o /dev/stderr -w "%{http_code}" 2> /dev/null)" -ne 200 ]; then
     echo "Release $CLANG_VERSION not found in $GITPROJECT repo!" 1>&2
     exit 1
   fi
@@ -185,15 +185,15 @@ else
 fi
 
 # Download the GitHub repo as a ZIP file
-pushd $TARBALL_DIR &>/dev/null
+pushd "$TARBALL_DIR" &>/dev/null
 
 if [ $GITPROJECT == "apple" ]; then
   # Resuming downloads of branch archives is not possible.
   # Always download them newly.
-  rm -f $(basename $CLANG_LLVM_PKG)
+  rm -f "$(basename "$CLANG_LLVM_PKG")"
 fi
 
-download $CLANG_LLVM_PKG
+download "$CLANG_LLVM_PKG"
 
 popd &>/dev/null #$TARBALL_DIR
 

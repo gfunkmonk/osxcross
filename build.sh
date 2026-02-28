@@ -11,15 +11,19 @@ pushd "${0%/*}" &>/dev/null
 
 source tools/tools.sh
 
-TAPI_VERSION=1600.0.11.8
 #TAPI_VERSION=1300.6.5
 #CCTOOLS_VERSION=986
 #LINKER_VERSION=711
+
+TAPI_VERSION=1600.0.11.8
 CCTOOLS_VERSION=1030.6.3
 LINKER_VERSION=956.6
 
 GITSRC="https://github.com/gfunkmonk"
 #GITSRC="https://github.com/tpoechtrager"
+
+CFLAGS="${CFLAGS:-} -Wno-cast-function-type-mismatch -Wno-unused-but-set-variable -Wno-unnecessary-virtual-specifier -Wno-unused-variable -Wno-parentheses"
+CXXFLAGS="${CFLAGS:-}"
 
 if [ $SDK_VERSION ]; then
   echo "SDK VERSION set in environment variable: $SDK_VERSION"

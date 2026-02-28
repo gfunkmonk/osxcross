@@ -4,3 +4,7 @@
 3. Do NOT over-complicate simple code, if it is working.
 4. I am a minimal kinda guy, I dislike fancy over-compicated code when un-needed.
 5. I like my settings, colors, names, etc.. don't change them for no reason, if you have to explain. (It's better isn't a valid excuse).
+6. no unnecessary variable renames.
+7. no unnecessary variable renames
+8. no unnecessary variable renames
+9. no unnecessary variable renames

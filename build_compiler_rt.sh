@@ -6,7 +6,7 @@
 # Please refer to README.COMPILER-RT.md for details.
 #
 
-pushd "${0%/*}" &>/dev/null
+pushd "${0%/*}" &>/dev/null || exit 1
 
 DESC=compiler-rt
 source tools/tools.sh
@@ -94,7 +94,7 @@ export OSXCROSS_NO_10_5_DEPRECATION_WARNING=1
 
 mkdir -p $BUILD_DIR
 
-pushd $BUILD_DIR &>/dev/null
+pushd $BUILD_DIR &>/dev/null || exit 1
 
 # Check if a build project for compiler-rt already exists.
 # Delete any directory that is called compiler-rt, but is not a build project.
@@ -105,7 +105,7 @@ fi
 get_sources https://github.com/llvm/llvm-project.git $BRANCH "compiler-rt"
 
 if [ $f_res -eq 1 ]; then
-  pushd "$CURRENT_BUILD_PROJECT_NAME/compiler-rt" &>/dev/null
+  pushd "$CURRENT_BUILD_PROJECT_NAME/compiler-rt" &>/dev/null || exit 1
 
   if [ $(osxcross-cmp $SDK_VERSION "<=" 10.11) -eq 1 ]; then
     # https://github.com/tpoechtrager/osxcross/issues/178
@@ -189,7 +189,7 @@ if [ $f_res -eq 1 ]; then
       fi
 
       mkdir $build_dir
-      pushd $build_dir &>/dev/null
+      pushd $build_dir &>/dev/null || return 1
 
       CC=$(xcrun -f clang) CXX=$(xcrun -f clang++) $CMAKE .. \
         -DDARWIN_osx_ARCHS="$OSX_ARCHS" \
@@ -204,7 +204,7 @@ if [ $f_res -eq 1 ]; then
 
       $MAKE -j $JOBS $EXTRA_MAKE_FLAGS
 
-      popd &>/dev/null
+      popd &>/dev/null || return 1
     }
 
     if [ $(osxcross-cmp $SDK_VERSION ">=" 11.0) -eq 1 ] &&
@@ -216,7 +216,7 @@ if [ $f_res -eq 1 ]; then
       {
         tmp=$(mktemp -d)
         [ -z "$tmp" ] && exit 1
-        pushd $tmp &>/dev/null
+        pushd $tmp &>/dev/null || return 1
 
         for arch in "$@"; do
           if echo "int main(){}" | xcrun clang -arch $arch -xc -o test - &>/dev/null; then
@@ -226,7 +226,7 @@ if [ $f_res -eq 1 ]; then
           fi
         done
 
-        popd &>/dev/null
+        popd &>/dev/null || return 1
         rmdir $tmp
       }
 
@@ -374,7 +374,7 @@ else
 
   ### MAKE ###
 
-  pushd "clang_darwin" &>/dev/null
+  pushd "clang_darwin" &>/dev/null || exit 1
 
   function print_install_command() {
     if [ -f "$1" ]; then
@@ -394,7 +394,7 @@ else
   print_install_command "asan_osx_dynamic/libcompiler_rt.dylib" \
     "libclang_rt.asan_osx_dynamic.dylib"
 
-  popd &>/dev/null
+  popd &>/dev/null || exit 1
 
   ### MAKE END ###
 

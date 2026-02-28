@@ -115,7 +115,7 @@ echo "Install Directory: $TARGET_DIR"
 echo "SDK Install Directory: $SDK_DIR"
 if [ -z "$UNATTENDED" ]; then
   echo ""
-  read -p "Press enter to start building"
+  read -r -p "Press enter to start building"
 fi
 echo ""
 
@@ -123,9 +123,9 @@ export PATH=$TARGET_DIR/bin:$PATH
 
 mkdir -p "$BUILD_DIR" "$TARGET_DIR" "$SDK_DIR"
 
-source $BASE_DIR/tools/trap_exit.sh
+source "$BASE_DIR/tools/trap_exit.sh"
 
-pushd "$BUILD_DIR" &>/dev/null
+pushd "$BUILD_DIR" &>/dev/null || exit 1
 
 
 

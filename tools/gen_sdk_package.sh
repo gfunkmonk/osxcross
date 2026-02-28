@@ -39,6 +39,7 @@ case $SDK_COMPRESSOR in
   *)
     echo "error: unknown compressor \"$SDK_COMPRESSOR\"" >&2
     exit 1
+    ;;
 esac
 
 function compress()
@@ -194,23 +195,19 @@ for pat in MacOS[0-9]*.sdk MacOSX[0-9]*.sdk; do
     if [[ "$d" != "MacOS.sdk" && "$d" != "MacOSX.sdk" && "$d" != *Patch* && -d "$d" ]]; then
       SDKS+=("$d")
     fi
-  done < <(compgen -G "$pat")
+  done < <(compgen -G "$pat" 2>/dev/null || true)
 done
 
 
 if [ ${#SDKS[@]} -eq 0 ]; then
-  echo "No SDK found" 1>&2
+  echo "No SDK found" >&2
   exit 1
 fi
 
-# Xcode 5
-LIBCXXDIR1="Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/c++/v1"
-
-# Xcode 6
-LIBCXXDIR2="Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1"
-
-# Xcode Command Line Tools
-LIBCXXDIR3="usr/include/c++/v1"
+# libc++ header locations across Xcode versions
+LIBCXXDIR1="Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/c++/v1"        # Xcode 5
+LIBCXXDIR2="Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1"    # Xcode 6
+LIBCXXDIR3="usr/include/c++/v1"                                                             # Command Line Tools
 
 # Manual directory
 MANDIR="Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/share/man"
@@ -225,7 +222,8 @@ for SDK in "${SDKS[@]}"; do
   fi
 
   TMP=$(mktemp -d)
-  cp -r $(rreadlink $SDK) $TMP/$SDK &>/dev/null || true
+
+  cp -r "$(rreadlink "$SDK")" "$TMP/$SDK" &>/dev/null || true
 
   pushd "$XCODEDIR" &>/dev/null
 
@@ -249,11 +247,11 @@ for SDK in "${SDKS[@]}"; do
 
   popd &>/dev/null
 
-  pushd $TMP &>/dev/null
+  pushd "$TMP" &>/dev/null
   compress "*" "$WDIR/$SDK$SDK_EXT"
   popd &>/dev/null
 
-  rm -rf $TMP
+  rm -rf "$TMP"
 done
 
 popd &>/dev/null

@@ -18,8 +18,7 @@ LINKER_VERSION=956.6
 WARNFLAGS="-Wno-cast-function-type-mismatch -Wno-unused-but-set-variable \
         -Wno-unnecessary-virtual-specifier -Wno-unused-variable -Wno-parentheses \
         -Wno-unused-parameter -Wno-non-virtual-dtor -Wno-ignored-optimization-argument \
-        -Wno-variadic-macros -Wno-deprecated-declarations"
-
+        -Wno-variadic-macros -Wno-deprecated-declarations -Wno-ctad-maybe-unsupported"
 CFLAGS="${CFLAGS:-} -O2 -pipe -fomit-frame-pointer ${WARNFLAGS}"
 CXXFLAGS="${CXXFLAGS:-} -O2 -pipe -fomit-frame-pointer ${WARNFLAGS}"
 

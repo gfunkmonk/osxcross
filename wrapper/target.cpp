@@ -947,9 +947,14 @@ bool Target::setup() {
   // Explicitly pass the sysroot to the linker. The clang driver propagates
   // -isysroot as -syslibroot to ld, but being explicit avoids edge cases where
   // the cross linker does not receive the sysroot automatically.
-  std::string LDSysRoot = "-Wl,-syslibroot,";
-  LDSysRoot += SDKPath;
-  fargs.push_back(LDSysRoot);
+  // Only add when the user has provided arguments; passing a -Wl, linker flag
+  // with no input files causes some clang versions to invoke the linker
+  // unconditionally, resulting in "undefined symbols for _main".
+  if (!args.empty()) {
+    std::string LDSysRoot = "-Wl,-syslibroot,";
+    LDSysRoot += SDKPath;
+    fargs.push_back(LDSysRoot);
+  }
 #endif
 
   if (isClang()) {

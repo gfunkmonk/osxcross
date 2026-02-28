@@ -78,6 +78,13 @@ eval $(osxcross-conf)
   [[ "${lines[0]}" == *\ -mmacosx-version-min=10.* ]]
   [[ "${lines[0]}" == *\ -arch\ x86_64\ * ]]
   [[ "${lines[0]}" != *\ -Wl,-no_compact_unwind\ * ]]
+  # No -Wl,-syslibroot when invoked with no input files (prevents spurious linker invocation)
+  [[ "${lines[0]}" != *\ -Wl,-syslibroot,*\ * ]]
+
+  run o64-clang++ foo.cpp
+  [ "$status" -eq 0 ]
+  # -Wl,-syslibroot must be present when input files are provided
+  [[ "${lines[0]}" == *\ -Wl,-syslibroot,*\ * ]]
 
   run o32-clang
   [ "$status" -eq 0 ]

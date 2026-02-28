@@ -1,0 +1,328 @@
+---
+name: Release osxcross
+
+on:
+  workflow_dispatch:
+    inputs:
+      freespace:
+        description: 'Clear Disk Space'
+        required: true
+        type: choice
+        default: no
+        options:
+          - no
+          - yes
+      swapspace:
+        description: 'Add Swap File'
+        required: true
+        type: choice
+        default: no
+        options:
+          - no
+          - yes
+      build-apple-clang:
+        description: 'Build Apple Clang'
+        required: true
+        type: choice
+        default: yes
+        options:
+          - no
+          - yes
+      sdk_14:
+        description: 'Build macOS 14 SDKs'
+        required: false
+        type: boolean
+        default: true
+      sdk_15:
+        description: 'Build macOS 15 SDKs'
+        required: false
+        type: boolean
+        default: true
+      sdk_26:
+        description: 'Build macOS 26 SDKs'
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CMAKE_VERSION: "4.2.0"
+
+jobs:
+  package_sdks:
+    uses: ./.github/workflows/sdk.yml
+    with:
+      sdk_14: ${{ inputs.sdk_14 }}
+      sdk_15: ${{ inputs.sdk_15 }}
+      sdk_26: ${{ inputs.sdk_26 }}
+
+  build_apple_clang:
+    name: Build Apple Clang (${{ matrix.runs-on }})
+    strategy:
+      fail-fast: false
+      matrix:
+        ubuntu_version: [24.04]
+        runs-on: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - name: Clear up some disk space
+        if: inputs.freespace == 'yes'
+        uses: jlumbroso/free-disk-space@main
+        with:
+          swap-storage: true
+          large-packages: true
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          docker-images: true
+      - uses: actions/checkout@v6
+      - name: Cache Apple Clang build
+        id: cache-apple-clang
+        uses: actions/cache/restore@v4
+        with:
+          path: dist/
+          key: apple-clang-21-ubuntu-${{ matrix.ubuntu_version }}-${{ matrix.runs-on }}-${{ hashFiles('build_apple_clang.sh', 'build_clang.sh', '.github/workflows/release.yml') }}
+
+      - name: Set up swap space
+        if: inputs.swapspace == 'yes'
+        uses: thejerrybao/setup-swap-space@v1
+        with:
+          swap-space-path: /mnt/swapfile
+          swap-size-gb: 8
+          remove-existing-swap-files: true
+      - name: Install dependencies
+        if: inputs.build-apple-clang == 'yes' && steps.cache-apple-clang.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            curl wget make cmake unzip git patch python3 \
+            libssl-dev liblzma-dev libxml2-dev xz-utils bzip2 cpio \
+            zlib1g-dev llvm-dev uuid-dev lsb-release \
+            software-properties-common gnupg build-essential ninja-build
+      - name: Install CMake
+        if: inputs.build-apple-clang == 'yes' && steps.cache-apple-clang.outputs.cache-hit != 'true'
+        run: |
+          ARCH=$(uname -m)
+          case "$ARCH" in
+            x86_64|amd64)  CMAKE_ARCH=x86_64 ;;
+            aarch64|arm64) CMAKE_ARCH=aarch64 ;;
+            *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
+          esac
+          sudo mkdir -p /cmake
+          curl -sSL "https://github.com/Kitware/CMake/releases/download/v${{ env.CMAKE_VERSION }}/cmake-${{ env.CMAKE_VERSION }}-linux-${CMAKE_ARCH}.tar.gz" \
+            | sudo tar -xz -C /cmake --strip-components=1
+          echo "/cmake/bin" >> "$GITHUB_PATH"
+      - name: ccache
+        if: inputs.build-apple-clang == 'yes' && steps.cache-apple-clang.outputs.cache-hit != 'true'
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          create-symlink: true
+          max-size: 10000MB
+          key: ccache-apple-clang-${{ matrix.runs-on }}
+
+      - name: Build Apple Clang
+        if: inputs.build-apple-clang == 'yes' && steps.cache-apple-clang.outputs.cache-hit != 'true'
+        env:
+          INSTALLPREFIX: /usr/local/apple-clang
+          CLANG_VERSION: "21"
+          UNATTENDED: "1"
+          ENABLE_CLANG_INSTALL: "1"
+          PORTABLE: "1"
+        run: |
+          JOBS=$(nproc) bash ./build_apple_clang.sh
+
+      - name: Package Apple Clang
+        if: inputs.build-apple-clang == 'yes' && steps.cache-apple-clang.outputs.cache-hit != 'true'
+        run: |
+          ARCH=$(uname -m)
+          case "$ARCH" in
+            x86_64|amd64)  PKG_ARCH=x86_64 ;;
+            aarch64|arm64) PKG_ARCH=aarch64 ;;
+            *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
+          esac
+          mkdir -p dist
+          tar -zcf "dist/apple-clang-21-linux-${PKG_ARCH}-gnu-ubuntu-${{ matrix.ubuntu_version }}.tar.gz" \
+            -C /usr/local/apple-clang .
+
+      - name: Save Apple Clang build cache
+        if: inputs.build-apple-clang == 'yes' && steps.cache-apple-clang.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: dist/
+          key: ${{ steps.cache-apple-clang.outputs.cache-primary-key }}
+
+      - name: Upload Apple Clang artifact
+        if: inputs.build-apple-clang == 'yes'
+        uses: actions/upload-artifact@v4
+        with:
+          name: apple-clang-${{ matrix.ubuntu_version }}-${{ matrix.runs-on == 'ubuntu-24.04-arm' && 'aarch64' || 'x86_64' }}
+          path: dist/*
+          overwrite: true
+
+  release_apple_clang:
+    name: Release Apple Clang
+    runs-on: ubuntu-latest
+    needs: build_apple_clang
+    if: inputs.build-apple-clang == 'yes'
+    steps:
+      - name: Download Apple Clang artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: apple-clang-*
+          merge-multiple: true
+          path: dist
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          prerelease: false
+          append_body: false
+          fail_on_unmatched_files: true
+          files: dist/*
+
+  release_sdks:
+    name: Release SDKs
+    runs-on: ubuntu-latest
+    needs: package_sdks
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download SDKs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: sdk-*
+          merge-multiple: true
+          path: tarballs
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          prerelease: false
+          append_body: false
+          fail_on_unmatched_files: true
+          files: tarballs/*
+
+  build_osxcross:
+    name: Build osxcross (SDK ${{ matrix.sdk_version }}, ${{ matrix.runs-on }})
+    strategy:
+      fail-fast: false
+      matrix:
+        sdk_version: ${{ fromJSON(needs.package_sdks.outputs.SDK_VERSIONS) }}
+        ubuntu_version: [24.04]
+        runs-on: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runs-on }}
+    needs:
+      - package_sdks
+      - release_sdks
+      - build_apple_clang
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Resolve SDK artifact name
+        id: sdk-artifact
+        run: |
+          # Artifacts are named sdk-{major}: "14.5" -> sdk-14
+          major=$(echo "${{ matrix.sdk_version }}" | cut -d. -f1)
+          echo "name=sdk-${major}" >> "$GITHUB_OUTPUT"
+
+      - name: Download SDK
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ steps.sdk-artifact.outputs.name }}
+          path: tarballs
+
+      - name: Download Apple Clang
+        if: inputs.build-apple-clang == 'yes'
+        uses: actions/download-artifact@v4
+        with:
+          name: apple-clang-${{ matrix.ubuntu_version }}-${{ matrix.runs-on == 'ubuntu-24.04-arm' && 'aarch64' || 'x86_64' }}
+          path: apple-clang
+
+      - name: Cache osxcross build
+        id: cache-osxcross
+        uses: actions/cache/restore@v4
+        with:
+          path: dist/
+          key: osxcross-ubuntu-${{ matrix.sdk_version }}-${{ matrix.runs-on }}-${{ hashFiles('build.sh', '.github/workflows/release.yml') }}
+
+      - name: Install dependencies
+        if: steps.cache-osxcross.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            curl wget make cmake unzip git patch python3 \
+            libssl-dev liblzma-dev libxml2-dev xz-utils bzip2 cpio \
+            zlib1g-dev llvm-dev uuid-dev lsb-release \
+            software-properties-common gnupg build-essential ninja-build
+
+      - name: Install CMake
+        if: steps.cache-osxcross.outputs.cache-hit != 'true'
+        run: |
+          ARCH=$(uname -m)
+          case "$ARCH" in
+            x86_64|amd64)  CMAKE_ARCH=x86_64 ;;
+            aarch64|arm64) CMAKE_ARCH=aarch64 ;;
+            *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
+          esac
+          sudo mkdir -p /cmake
+          curl -sSL "https://github.com/Kitware/CMake/releases/download/v${{ env.CMAKE_VERSION }}/cmake-${{ env.CMAKE_VERSION }}-linux-${CMAKE_ARCH}.tar.gz" \
+            | sudo tar -xz -C /cmake --strip-components=1
+          echo "/cmake/bin" >> "$GITHUB_PATH"
+
+      - name: Extract and install Apple Clang
+        if: inputs.build-apple-clang == 'yes' && steps.cache-osxcross.outputs.cache-hit != 'true'
+        run: |
+          CLANG_DIR=/usr/local/apple-clang
+          sudo mkdir -p "$CLANG_DIR"
+          sudo tar -xzf apple-clang/*.tar.gz -C "$CLANG_DIR"
+          echo "$CLANG_DIR/bin" >> "$GITHUB_PATH"
+
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          create-symlink: true
+          max-size: 10000MB
+          key: ccache-osxcross-${{ matrix.sdk_version }}-${{ matrix.runs-on }}
+
+      - name: Build osxcross
+        if: steps.cache-osxcross.outputs.cache-hit != 'true'
+        env:
+          UNATTENDED: "1"
+          SDK_VERSION: ${{ matrix.sdk_version }}
+        run: |
+          JOBS=$(nproc) bash ./build.sh
+
+      - name: Package osxcross
+        if: steps.cache-osxcross.outputs.cache-hit != 'true'
+        run: |
+          ARCH=$(uname -m)
+          case "$ARCH" in
+            x86_64|amd64)  PKG_ARCH=x86_64 ;;
+            aarch64|arm64) PKG_ARCH=aarch64 ;;
+            *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
+          esac
+          mkdir -p dist
+          tar -zcf "dist/osxcross-${{ matrix.sdk_version }}-linux-${PKG_ARCH}-gnu-ubuntu-${{ matrix.ubuntu_version }}.tar.gz" \
+            -C /usr/local/osxcross .
+
+      - name: Save osxcross build cache
+        if: steps.cache-osxcross.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: dist/
+          key: ${{ steps.cache-osxcross.outputs.cache-primary-key }}
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          prerelease: false
+          append_body: false
+          fail_on_unmatched_files: true
+          files: dist/*

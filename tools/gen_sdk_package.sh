@@ -11,8 +11,7 @@ else
   TAR=tar
 fi
 
-
-if [ -z "$SDK_COMPRESSOR" ]; then
+if [ -z "${SDK_COMPRESSOR:-}" ]; then
   if command -v xz &>/dev/null; then
     SDK_COMPRESSOR=xz
     SDK_EXT="tar.xz"
@@ -70,28 +69,29 @@ function rreadlink()
 
 WDIR=$(pwd)
 
-if [ -z "$XCODE_TOOLS" ]; then
-  # Using full fledged Xcode
+if [ -z "${XCODE_TOOLS:-}" ]; then
+  # Full Xcode
 
   function set_xcode_dir()
   {
+    local base="$1"
     local tmp
-    tmp=$(find "$1" -maxdepth 1 -name "Xcode*.app" ! -name "*beta*" 2>/dev/null | head -n1)
 
+    # Prefer non-beta first
+    tmp=$(find "$base" -maxdepth 1 -name "Xcode*.app" ! -name "*beta*" 2>/dev/null | head -n1)
     if [ -z "$tmp" ]; then
-      tmp=$(find "$1" -maxdepth 1 -name "Xcode*.app" 2>/dev/null | head -n1)
+      tmp=$(find "$base" -maxdepth 1 -name "Xcode*.app" 2>/dev/null | head -n1)
     fi
 
     if [ -n "$tmp" ]; then
-      tmp=$(basename "$tmp")
-      XCODEDIR="$1/$tmp"
+      XCODEDIR="$base/$(basename "$tmp")"
     fi
   }
 
-  if [ $(uname -s) != "Darwin" ]; then
-    if [ -z "$XCODEDIR" ]; then
-      echo "This script must be run on macOS" 1>&2
-      echo "... Or with XCODEDIR=... on Linux" 1>&2
+  if [ "$(uname -s)" != "Darwin" ]; then
+    if [ -z "${XCODEDIR:-}" ]; then
+      echo "This script must be run on macOS" >&2
+      echo "... Or with XCODEDIR=... on Linux" >&2
       exit 1
     else
       case "$XCODEDIR" in
@@ -101,24 +101,27 @@ if [ -z "$XCODE_TOOLS" ]; then
       set_xcode_dir "$XCODEDIR"
     fi
   else
-    set_xcode_dir $(echo /Volumes/Xcode* | tr ' ' '\n' | grep -v "beta" | head -n1)
+    xcode_vol=$(echo /Volumes/Xcode* | tr ' ' '\n' | grep -v "beta" | head -n1)
+    set_xcode_dir "$xcode_vol"
 
-    if [ -z "$XCODEDIR" ]; then
-      set_xcode_dir /Applications
+    if [ -z "${XCODEDIR:-}" ]; then
+      set_xcode_dir "/Applications"
 
-      if [ -z "$XCODEDIR" ]; then
-        set_xcode_dir $(echo /Volumes/Xcode* | tr ' ' '\n' | head -n1)
+      if [ -z "${XCODEDIR:-}" ]; then
+        # FIX: quote substitution; capture with a variable first
+        fallback_vol=$(echo /Volumes/Xcode* | tr ' ' '\n' | head -n1)
+        set_xcode_dir "$fallback_vol"
 
-        if [ -z "$XCODEDIR" ]; then
-          echo "please mount Xcode.dmg" 1>&2
+        if [ -z "${XCODEDIR:-}" ]; then
+          echo "please mount Xcode.dmg" >&2
           exit 1
         fi
       fi
     fi
   fi
 
-  if [ ! -d "$XCODEDIR" ]; then
-    echo "cannot find Xcode (XCODEDIR=$XCODEDIR)" 1>&2
+  if [ ! -d "${XCODEDIR:-}" ]; then
+    echo "cannot find Xcode (XCODEDIR=${XCODEDIR:-})" >&2
     exit 1
   fi
 
@@ -130,24 +133,22 @@ if [ -z "$XCODE_TOOLS" ]; then
 
   if [ -d "Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs" ]; then
     pushd "Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs" &>/dev/null
-  else
-    if [ -d "../Packages" ]; then
+  elif [ -d "../Packages" ]; then
       pushd "../Packages" &>/dev/null
     elif [ -d "Packages" ]; then
       pushd "Packages" &>/dev/null
     else
-      echo "Xcode (or this script) is out of date" 1>&2
-      echo "trying some magic to find the SDKs anyway ..." 1>&2
+    echo "Xcode (or this script) is out of date" >&2
+    echo "trying some magic to find the SDKs anyway ..." >&2
 
-      SDKDIR=$(find . -name SDKs -type d | grep MacOSX | head -n1)
-
-      if [ -z "$SDKDIR" ]; then
-        echo "cannot find SDKs!" 1>&2
-        exit 1
+    local SDKDIR
+        SDKDIR=$(find . -name SDKs -type d | grep MacOSX | head -n1)
+        if [ -z "$SDKDIR" ]; then
+      echo "cannot find SDKs!" >&2
+          exit 1
+        fi
+        pushd "$SDKDIR" &>/dev/null
       fi
-      pushd "$SDKDIR" &>/dev/null
-    fi
-  fi
 
 else
   # Using Xcode Command Line tools
@@ -190,7 +191,7 @@ else
 fi
 
 SDKS=()
-for pat in MacOS[0-9]*.sdk MacOSX[0-9]*.sdk; do
+for pat in "MacOS[0-9]*.sdk" "MacOSX[0-9]*.sdk"; do
   while IFS= read -r d; do
     if [[ "$d" != "MacOS.sdk" && "$d" != "MacOSX.sdk" && "$d" != *Patch* && -d "$d" ]]; then
       SDKS+=("$d")
@@ -198,51 +199,54 @@ for pat in MacOS[0-9]*.sdk MacOSX[0-9]*.sdk; do
   done < <(compgen -G "$pat" 2>/dev/null || true)
 done
 
-
 if [ ${#SDKS[@]} -eq 0 ]; then
   echo "No SDK found" >&2
   exit 1
 fi
 
 # libc++ header locations across Xcode versions
-LIBCXXDIR1="Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/c++/v1"        # Xcode 5
-LIBCXXDIR2="Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1"    # Xcode 6
-LIBCXXDIR3="usr/include/c++/v1"                                                             # Command Line Tools
+LIBCXXDIR1="Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/c++/v1"     # Xcode 5
+LIBCXXDIR2="Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1" # Xcode 6
+LIBCXXDIR3="usr/include/c++/v1"                                                        # Command Line Tools
 
 # Manual directory
 MANDIR="Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/share/man"
 
 for SDK in "${SDKS[@]}"; do
-  echo -n "packaging $(echo "$SDK" | sed -E "s/(.sdk|.pkg)//g") SDK "
+  if [ -f "$WDIR/$SDK$SDK_EXT" ]; then
+    echo "skipping $(echo "$SDK" | sed -E 's/(.sdk|.pkg)//g') SDK (already packaged)"
+    continue
+  fi
+
+  echo -n "packaging $(echo "$SDK" | sed -E 's/(.sdk|.pkg)//g') SDK "
   echo "(this may take several minutes) ..."
 
-  if [[ $SDK == *.pkg ]]; then
-    cp $SDK $WDIR
+  if [[ "$SDK" == *.pkg ]]; then
+    cp "$SDK" "$WDIR"
     continue
   fi
 
   TMP=$(mktemp -d)
-
   cp -r "$(rreadlink "$SDK")" "$TMP/$SDK" &>/dev/null || true
 
   pushd "$XCODEDIR" &>/dev/null
 
-  mkdir -p $TMP/$SDK/usr/include/c++
+  mkdir -p "$TMP/$SDK/usr/include/c++"
 
-  # libc++ headers
+  # Copy libc++ headers if missing from the SDK
   if [ ! -f "$TMP/$SDK/usr/include/c++/v1/version" ]; then
-    if [ -d $LIBCXXDIR1 ]; then
-      cp -rf $LIBCXXDIR1 "$TMP/$SDK/usr/include/c++"
-    elif [ -d $LIBCXXDIR2 ]; then
-      cp -rf $LIBCXXDIR2 "$TMP/$SDK/usr/include/c++"
-    elif [ -d $LIBCXXDIR3 ]; then
-      cp -rf $LIBCXXDIR3 "$TMP/$SDK/usr/include/c++"
+    if [ -d "$LIBCXXDIR1" ]; then
+      cp -rf "$LIBCXXDIR1" "$TMP/$SDK/usr/include/c++"
+    elif [ -d "$LIBCXXDIR2" ]; then
+      cp -rf "$LIBCXXDIR2" "$TMP/$SDK/usr/include/c++"
+    elif [ -d "$LIBCXXDIR3" ]; then
+      cp -rf "$LIBCXXDIR3" "$TMP/$SDK/usr/include/c++"
     fi
   fi
 
-  if [ -d $MANDIR ]; then
-    mkdir -p $TMP/$SDK/usr/share/man
-    cp -rf $MANDIR/* $TMP/$SDK/usr/share/man
+  if [ -d "$MANDIR" ]; then
+    mkdir -p "$TMP/$SDK/usr/share/man"
+    cp -rf "$MANDIR/"* "$TMP/$SDK/usr/share/man"
   fi
 
   popd &>/dev/null
@@ -251,7 +255,7 @@ for SDK in "${SDKS[@]}"; do
   compress "*" "$WDIR/$SDK$SDK_EXT"
   popd &>/dev/null
 
-  rm -rf "$TMP"
+  rm -rf "$TMP"   # FIX: quoted
 done
 
 popd &>/dev/null

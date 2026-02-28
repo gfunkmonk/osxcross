@@ -82,4 +82,4 @@ wrapper: $(OBJS)
 clean:
 	rm -f $(BIN) $(OBJS) $(OBJS:.o=.d)
 
--include $(SRCS:cpp=d)
+-include $(SRCS:.cpp=.d)

@@ -931,8 +931,9 @@ bool Target::setup() {
     }
   }
 
-#ifdef __ANDROID__
-  // Workaround for Termux
+#ifndef __APPLE__
+  // Pass syslibroot to linker to ensure it can find SDK libraries
+  // This is especially important for x86_64h architecture
   std::string LDSysRoot = "-Wl,-syslibroot,";
   LDSysRoot += SDKPath;
   fargs.push_back(LDSysRoot);

@@ -78,7 +78,8 @@ eval $(osxcross-conf)
   [[ "${lines[0]}" == *\ -mmacosx-version-min=10.* ]]
   [[ "${lines[0]}" == *\ -arch\ x86_64\ * ]]
   [[ "${lines[0]}" != *\ -Wl,-no_compact_unwind\ * ]]
-  # No -Wl,-syslibroot when invoked with no input files (prevents spurious linker invocation)
+  # -Wl,-syslibroot must NOT be present with no input files: it causes clang
+  # to enter link mode and invoke ld, which then fails with "undefined symbols for _main"
   [[ "${lines[0]}" != *\ -Wl,-syslibroot,*\ * ]]
 
   run o64-clang++ foo.cpp
@@ -86,7 +87,7 @@ eval $(osxcross-conf)
   # -Wl,-syslibroot must be present when input files are provided
   [[ "${lines[0]}" == *\ -Wl,-syslibroot,*\ * ]]
 
-  run o32-clang
+  run o32-clang foo.c
   [ "$status" -eq 0 ]
   [[ "${lines[0]}" == *\ *clang*\ \(clang\)\ * ]]
   [[ "${lines[0]}" == *\ -target\ i386-apple-darwin*\ * ]]

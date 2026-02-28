@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -ex
+
 test -z "$COMPRESSLEVEL" && COMPRESSLEVEL=9
 
 if [ -n "$BINARYPACKAGE" ]; then

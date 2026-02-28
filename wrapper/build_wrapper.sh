@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
-pushd "${0%/*}" &>/dev/null
-pushd .. &>/dev/null
+pushd "${0%/*}" &>/dev/null || exit 1
+pushd .. &>/dev/null || exit 1
 source ./tools/tools.sh
-popd &>/dev/null
+popd &>/dev/null || exit 1
 
 if [ -z "$SUPPORTED_ARCHS" ]; then
   export SUPPORTED_ARCHS=$OSXCROSS_SUPPORTED_ARCHS

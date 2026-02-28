@@ -6,7 +6,7 @@
 # gcc. Please refer to the README.md for details.
 #
 
-pushd "${0%/*}" &>/dev/null
+pushd "${0%/*}" &>/dev/null || exit 1
 
 unset LIBRARY_PATH
 
@@ -40,7 +40,7 @@ fi
 GCC_MIRROR="https://ftp.fu-berlin.de/unix/languages/gcc/releases/"
 GCC_MIRROR_WITH_SNAPSHOTS="https://mirror.koddos.net/gcc"
 
-pushd $BUILD_DIR &>/dev/null
+pushd $BUILD_DIR &>/dev/null || exit 1
 
 function remove_locks()
 {
@@ -51,13 +51,13 @@ source $BASE_DIR/tools/trap_exit.sh
 
 if [ ! -f "have_gcc_${GCC_VERSION}_${TARGET}" ]; then
 
-pushd $TARBALL_DIR &>/dev/null
+pushd $TARBALL_DIR &>/dev/null || exit 1
 if [[ $GCC_VERSION != *-* ]]; then
   download "$GCC_MIRROR/gcc-$GCC_VERSION/gcc-$GCC_VERSION.tar.xz"
 else
   download "$GCC_MIRROR_WITH_SNAPSHOTS/snapshots/$GCC_VERSION/gcc-$GCC_VERSION.tar.xz"
 fi
-popd &>/dev/null
+popd &>/dev/null || exit 1
 
 echo "cleaning up ..."
 rm -rf gcc* 2>/dev/null
@@ -65,7 +65,7 @@ rm -rf gcc* 2>/dev/null
 extract "$TARBALL_DIR/gcc-$GCC_VERSION.tar.xz"
 echo ""
 
-pushd gcc*$GCC_VERSION* &>/dev/null
+pushd gcc*$GCC_VERSION* &>/dev/null || exit 1
 
 rm -f $TARGET_DIR/bin/*-gcc*
 rm -f $TARGET_DIR/bin/*-g++*
@@ -111,7 +111,7 @@ fi
 
 
 mkdir -p build
-pushd build &>/dev/null
+pushd build &>/dev/null || exit 1
 
 if [[ $PLATFORM == *BSD ]]; then
   export CPATH="/usr/local/include:/usr/pkg/include:$CPATH"
@@ -160,29 +160,29 @@ $MAKE install
 
 GCC_VERSION=$(echo $GCC_VERSION | tr '-' ' ' |  awk '{print $1}')
 
-pushd $TARGET_DIR/x86_64-apple-$TARGET/include &>/dev/null
-pushd c++/${GCC_VERSION}* &>/dev/null
+pushd $TARGET_DIR/x86_64-apple-$TARGET/include &>/dev/null || exit 1
+pushd c++/${GCC_VERSION}* &>/dev/null || exit 1
 
 cat $PATCH_DIR/libstdcxx.patch | \
   $SED "s/darwin13/$TARGET/g" | \
   patch -p0 -l &>/dev/null || true
 
-popd &>/dev/null
-popd &>/dev/null
+popd &>/dev/null || exit 1
+popd &>/dev/null || exit 1
 
-popd &>/dev/null # build
-popd &>/dev/null # gcc
+popd &>/dev/null || exit 1 # build
+popd &>/dev/null || exit 1 # gcc
 
 touch "have_gcc_${GCC_VERSION}_${TARGET}"
 
 fi # have gcc
 
-popd &>/dev/null # build dir
+popd &>/dev/null || exit 1 # build dir
 
 unset USESYSTEMCOMPILER
 source tools/tools.sh
 
-pushd $TARGET_DIR/bin &>/dev/null
+pushd $TARGET_DIR/bin &>/dev/null || exit 1
 
 if [ ! -f i386-apple-$TARGET-base-gcc ]; then
   mv x86_64-apple-$TARGET-gcc \
@@ -205,7 +205,7 @@ echo "compiling wrapper ..."
 TARGETCOMPILER=gcc \
   $BASE_DIR/wrapper/build_wrapper.sh
 
-popd &>/dev/null # wrapper dir
+popd &>/dev/null || exit 1 # wrapper dir
 
 echo ""
 

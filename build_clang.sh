@@ -292,8 +292,8 @@ export CFLAGS=""
 export CXXFLAGS=""
 
 if [ -z "$PORTABLE" ]; then
-  export CFLAGS+=" -march=native"
-  export CXXFLAGS+=" -march=native"
+  export CFLAGS+=" "
+  export CXXFLAGS+=" "
 fi
 
 # Silence warnings to get a cleaner build state output

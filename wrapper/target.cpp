@@ -557,7 +557,9 @@ bool Target::setup() {
   if (!getSDKPath(SDKPath))
     return false;
 
-  triple = getArchName(arch);
+  Arch normalizedArch = arch == Arch::x86_64h ? Arch::x86_64 : arch;
+
+  triple = getArchName(normalizedArch);
   triple += "-";
   triple += vendor;
   triple += "-";
@@ -890,6 +892,16 @@ bool Target::setup() {
     bool is32bit = false;
     bool isArm = false;
 
+#ifndef __APPLE__
+    // x86_64h is binary-compatible with x86_64 (same CPU type, different
+    // subtype). Newer macOS SDK TBD files omit x86_64h as a separate arch,
+    // so pass x86_64 to the linker to allow it to find standard library
+    // symbols. The triple is already normalized to x86_64 for this reason.
+    const Arch clangArchFlag = (arch == Arch::x86_64h) ? Arch::x86_64 : arch;
+#else
+    const Arch clangArchFlag = arch;
+#endif
+
     switch (arch) {
     case Arch::i386:
     case Arch::i486:
@@ -921,7 +933,7 @@ bool Target::setup() {
         if (usegcclibs && targetarchs.size() > 1)
           break;
         fargs.push_back("-arch");
-        fargs.push_back(getArchName(arch));
+        fargs.push_back(getArchName(clangArchFlag));
       }
       break;
     default:
@@ -931,8 +943,10 @@ bool Target::setup() {
     }
   }
 
-#ifdef __ANDROID__
-  // Workaround for Termux
+#ifndef __APPLE__
+  // Explicitly pass the sysroot to the linker. The clang driver propagates
+  // -isysroot as -syslibroot to ld, but being explicit avoids edge cases where
+  // the cross linker does not receive the sysroot automatically.
   std::string LDSysRoot = "-Wl,-syslibroot,";
   LDSysRoot += SDKPath;
   fargs.push_back(LDSysRoot);

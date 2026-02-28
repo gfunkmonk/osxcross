@@ -95,8 +95,7 @@ if [ -n "$ENABLE_ARCHS" ]; then
   SUPPORTED_ARCHS="$(echo $ENABLE_ARCHS | xargs)"
 fi
 
-# Minimum targeted macOS version
-# Must be <= SDK_VERSION
+# Minimum targeted macOS version — must be <= SDK_VERSION
 if [ -n "$OSX_VERSION_MIN_INT" ] && [ -z "$OSX_VERSION_MIN" ]; then
   OSX_VERSION_MIN=$OSX_VERSION_MIN_INT
 fi
@@ -197,6 +196,7 @@ if [ $f_res -eq 1 ]; then
   $MAKE -j$JOBS
   $MAKE install -j$JOBS
   popd &>/dev/null
+  build_success
 fi
 
 ## Create Arch Symlinks ##
@@ -205,40 +205,26 @@ pushd $TARGET_DIR/bin &>/dev/null
 mapfile -t TOOLS < <(find . -name "$(first_supported_arch)-apple-${TARGET}*")
 function create_arch_symlinks()
 {
-  local arch=$1
+  local arch="$1"
   local default_arch
   default_arch=$(first_supported_arch)
   # Target arch must not be the source arch.
-  if [ "$arch" = "$default_arch" ]; then
-    return
-  fi
+  [ "$arch" = "$default_arch" ] && return
   for TOOL in "${TOOLS[@]}"; do
     verbose_cmd create_symlink $TOOL $(echo "$TOOL" | $SED "s/$(first_supported_arch)/$arch/g")
   done
 }
 
-if arch_supported x86_64; then
-  create_arch_symlinks "x86_64"
-fi
-
-if arch_supported x86_64h; then
-  create_arch_symlinks "x86_64h"
-fi
-
-if arch_supported i386; then
-  create_arch_symlinks "i386"
-fi
-
+arch_supported x86_64  && create_arch_symlinks "x86_64"
+arch_supported x86_64h && create_arch_symlinks "x86_64h"
+arch_supported i386    && create_arch_symlinks "i386"
 if arch_supported arm64; then
   create_arch_symlinks "aarch64"
   create_arch_symlinks "arm64"
 fi
+arch_supported arm64e  && create_arch_symlinks "arm64e"
 
-if arch_supported arm64e; then
-  create_arch_symlinks "arm64e"
-fi
-
-# For unpatched dsymutil. There is currently no way around it.
+# For unpatched dsymutil — no way around it currently
 create_symlink x86_64-apple-$TARGET-lipo lipo
 popd &>/dev/null
 
@@ -255,7 +241,7 @@ popd &>/dev/null
 ## Extract SDK and move it to $SDK_DIR ##
 
 echo ""
-extract $SDK
+extract "$SDK"
 
 rm -rf $SDK_DIR/MacOSX$SDK_VERSION* 2>/dev/null
 if [ "$(ls -l SDKs/*$SDK_VERSION* 2>/dev/null | wc -l | tr -d ' ')" != "0" ]; then
@@ -272,7 +258,7 @@ fi
 ## Fix broken SDKs ##
 
 pushd $SDK_DIR/MacOSX$SDK_VERSION*.sdk &>/dev/null
-# Remove troublesome libc++ IWYU mapping file that may cause compiler errors
+# Remove libc++ IWYU mapping file that can cause compiler errors
 # https://github.com/include-what-you-use/include-what-you-use/blob/master/docs/IWYUMappings.md
 rm -f usr/include/c++/v1/libcxx.imp
 set +e

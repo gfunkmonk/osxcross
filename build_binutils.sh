@@ -33,7 +33,7 @@ fi
 # mirror
 MIRROR="https://ftp.gnu.org/gnu"
 
-pushd $BUILD_DIR &>/dev/null || exit 1
+pushd "$BUILD_DIR" &>/dev/null || exit 1
 
 function remove_locks()
 {

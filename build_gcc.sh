@@ -14,8 +14,7 @@ DESC=gcc
 USESYSTEMCOMPILER=1
 source tools/tools.sh
 
-# GCC version to build
-# (<4.7 will not work properly with libc++)
+# GCC version to build (< 4.7 will not work properly with libc++)
 if [ -z "$GCC_VERSION" ]; then
   GCC_VERSION=15.2.0
   #GCC_VERSION=5-20200228 # snapshot
@@ -113,15 +112,19 @@ fi
 mkdir -p build
 pushd build &>/dev/null || exit 1
 
-if [[ $PLATFORM == *BSD ]]; then
-  export CPATH="/usr/local/include:/usr/pkg/include:$CPATH"
-  export LDFLAGS="-L/usr/local/lib -L/usr/pkg/lib $LDFLAGS"
-  export LD_LIBRARY_PATH="/usr/local/lib:/usr/pkg/lib:$LD_LIBRARY_PATH"
-elif [ "$PLATFORM" == "Darwin" ]; then
-  export CPATH="/opt/local/include:$CPATH"
-  export LDFLAGS="-L/opt/local/lib $LDFLAGS"
-  export LD_LIBRARY_PATH="/opt/local/lib:$LD_LIBRARY_PATH"
-fi
+  # Platform-specific include/lib paths
+  case "$PLATFORM" in
+    *BSD)
+      export CPATH="/usr/local/include:/usr/pkg/include:${CPATH:-}"
+      export LDFLAGS="-L/usr/local/lib -L/usr/pkg/lib ${LDFLAGS:-}"
+      export LD_LIBRARY_PATH="/usr/local/lib:/usr/pkg/lib:${LD_LIBRARY_PATH:-}"
+      ;;
+    Darwin)
+      export CPATH="/opt/local/include:${CPATH:-}"
+      export LDFLAGS="-L/opt/local/lib ${LDFLAGS:-}"
+      export LD_LIBRARY_PATH="/opt/local/lib:${LD_LIBRARY_PATH:-}"
+      ;;
+  esac
 
 EXTRACONFFLAGS=""
 
@@ -131,10 +134,7 @@ if [ "$PLATFORM" != "Darwin" ]; then
 fi
 
 LANGS="c,c++,objc,obj-c++"
-
-if [ -n "$ENABLE_FORTRAN" ]; then
-  LANGS+=",fortran"
-fi
+  [ -n "${ENABLE_FORTRAN:-}" ] && LANGS+=",fortran"
 
 if [ $(osxcross-cmp $SDK_VERSION "<=" 10.13) -eq 1 ]; then
   EXTRACONFFLAGS+="--with-multilib-list=m32,m64 --enable-multilib "
@@ -202,8 +202,7 @@ fi
 
 echo "compiling wrapper ..."
 
-TARGETCOMPILER=gcc \
-  $BASE_DIR/wrapper/build_wrapper.sh
+TARGETCOMPILER=gcc "$BASE_DIR/wrapper/build_wrapper.sh"
 
 popd &>/dev/null # wrapper dir
 

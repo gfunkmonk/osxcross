@@ -923,7 +923,15 @@ bool Target::setup() {
         if (usegcclibs && targetarchs.size() > 1)
           break;
         fargs.push_back("-arch");
+#ifndef __APPLE__
+        // x86_64h is binary-compatible with x86_64 (same CPU type, different
+        // subtype). Newer macOS SDK TBD files omit x86_64h as a separate arch,
+        // so pass x86_64 to the linker to allow it to find standard library
+        // symbols. The triple is already normalized to x86_64 for this reason.
+        fargs.push_back(getArchName(arch == Arch::x86_64h ? Arch::x86_64 : arch));
+#else
         fargs.push_back(getArchName(arch));
+#endif
       }
       break;
     default:
@@ -934,8 +942,9 @@ bool Target::setup() {
   }
 
 #ifndef __APPLE__
-  // Pass syslibroot to linker to ensure it can find SDK libraries
-  // This is especially important for x86_64h architecture
+  // Explicitly pass the sysroot to the linker. The clang driver propagates
+  // -isysroot as -syslibroot to ld, but being explicit avoids edge cases where
+  // the cross linker does not receive the sysroot automatically.
   std::string LDSysRoot = "-Wl,-syslibroot,";
   LDSysRoot += SDKPath;
   fargs.push_back(LDSysRoot);

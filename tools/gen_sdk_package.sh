@@ -75,14 +75,16 @@ if [ -z "$XCODE_TOOLS" ]; then
   function set_xcode_dir()
   {
     local tmp
+    local path
     # Use glob pattern instead of ls | grep
-    tmp=$(find "$1" -maxdepth 1 -name "Xcode*.app" ! -name "*beta*" 2>/dev/null | head -n1 | xargs -r basename)
+    path=$(find "$1" -maxdepth 1 -name "Xcode*.app" ! -name "*beta*" 2>/dev/null | head -n1)
 
-    if [ -z "$tmp" ]; then
-      tmp=$(find "$1" -maxdepth 1 -name "Xcode*.app" 2>/dev/null | head -n1 | xargs -r basename)
+    if [ -z "$path" ]; then
+      path=$(find "$1" -maxdepth 1 -name "Xcode*.app" 2>/dev/null | head -n1)
     fi
 
-    if [ -n "$tmp" ]; then
+    if [ -n "$path" ]; then
+      tmp=$(basename "$path")
       XCODEDIR="$1/$tmp"
     fi
   }

@@ -557,7 +557,9 @@ bool Target::setup() {
   if (!getSDKPath(SDKPath))
     return false;
 
-  triple = getArchName(arch);
+  Arch normalizedArch = arch == Arch::x86_64h ? Arch::x86_64 : arch;
+
+  triple = getArchName(normalizedArch);
   triple += "-";
   triple += vendor;
   triple += "-";

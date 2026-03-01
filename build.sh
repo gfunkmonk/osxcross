@@ -7,10 +7,6 @@
 
 VERSION=1.5
 
-pushd "${0%/*}" &>/dev/null
-
-source tools/tools.sh
-
 TAPI_VERSION=1600.0.11.8
 CCTOOLS_VERSION=1030.6.3
 LINKER_VERSION=956.6
@@ -21,6 +17,102 @@ WARNFLAGS="-Wno-cast-function-type-mismatch -Wno-unused-but-set-variable \
         -Wno-variadic-macros -Wno-deprecated-declarations -Wno-ctad-maybe-unsupported"
 CFLAGS="${CFLAGS:-} -O2 -pipe -fomit-frame-pointer ${WARNFLAGS}"
 CXXFLAGS="${CXXFLAGS:-} -O2 -pipe -fomit-frame-pointer ${WARNFLAGS}"
+
+usage() {
+echo -e "\x1B[1;37m Usage: ./build.sh [ OPTIONS ]\x1B[0m"
+echo -e ""
+echo -e "\x1B[1;37m Options:\x1B[0m"
+echo -e ""
+echo -e "\x1B[1;37m   -i, --interactive      \x1B[1;32mShow a menu of SDK versions found in tarballs/ and\x1B[0m"
+echo -e "\x1B[1;32m                          select one interactively. Has no effect if SDK_VERSION\x1B[0m"
+echo -e "\x1B[1;32m                          is already set. (needs dialog or whiptail)\x1B[0m"
+echo -e ""
+echo -e "\x1B[1;37m   -u, --unattended       \x1B[1;33mSkip all interactive prompts (equivalent to UNATTENDED=1).\x1B[0m"
+echo -e ""
+echo -e "\x1B[1;37m   -t, --targetdir <dir>  \x1B[1;36mSets the install directory (equivalent to TARGET_DIR=<dir>).\x1B[0m"
+echo -e ""
+}
+
+pushd "${0%/*}" &>/dev/null
+
+INTERACTIVE=0
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -h|--help|help) usage; exit 0 ;;
+    -i|--interactive) INTERACTIVE=1;  shift ;;
+    -u|--unattended)  UNATTENDED=1;   shift ;;
+    -t|--targetdir)
+      if [[ $# -lt 2 || "$2" == -* ]]; then
+        echo "error: $1 requires a directory argument" >&2; exit 1
+      fi
+      TARGET_DIR="$2"; shift 2 ;;
+    *) echo "Unknown argument: $1" >&2; exit 1 ;;
+  esac
+done
+
+if [ "$INTERACTIVE" -eq 1 ]; then
+  if [ -n "${SDK_VERSION:-}" ]; then
+    echo "SDK_VERSION already set in environment ($SDK_VERSION); skipping interactive picker."
+  else
+    # Require whiptail or dialog
+    if command -v whiptail &>/dev/null; then
+      DIALOG=whiptail
+    elif command -v dialog &>/dev/null; then
+      DIALOG=dialog
+    else
+      echo "error: --interactive requires 'whiptail' or 'dialog' to be installed." >&2
+      echo "  Install with: sudo apt-get install whiptail  (or: sudo apt-get install dialog)" >&2
+      exit 1
+    fi
+
+    # Collect SDK tarballs and extract version strings
+    SDK_ENTRIES=()
+    while IFS= read -r tarball; do
+      version=$(basename "$tarball" | sed -E 's/^MacOSX//; s/\.sdk\.tar\..+$//')
+      [ -n "$version" ] && SDK_ENTRIES+=("$version" "$tarball")
+    done < <(find tarballs/ -maxdepth 1 -type f \
+               -name "MacOSX*.sdk.tar.*" | sort -V)
+
+    if [ ${#SDK_ENTRIES[@]} -eq 0 ]; then
+      echo "error: No SDK tarballs found in tarballs/." >&2
+      echo "  Expected files matching: tarballs/MacOSX*.sdk.tar.*" >&2
+      exit 1
+    fi
+
+    MENU_ITEMS=()
+    for (( i=0; i<${#SDK_ENTRIES[@]}; i+=2 )); do
+      ver="${SDK_ENTRIES[$i]}"
+      path="${SDK_ENTRIES[$((i+1))]}"
+      MENU_ITEMS+=("$ver" "$(basename "$path")")
+    done
+
+    RESULT_FILE=$(mktemp)
+    trap 'rm -f "$RESULT_FILE"' EXIT
+
+    "$DIALOG" \
+      --clear \
+      --title "OSXCross SDK Selector" \
+      --menu "Select the SDK version to build against:" \
+      20 60 12 \
+      "${MENU_ITEMS[@]}" \
+      2>"$RESULT_FILE" >/dev/tty
+
+    EXIT_CODE=$?
+    SELECTED=$(cat "$RESULT_FILE")
+    rm -f "$RESULT_FILE"
+    trap - EXIT
+
+    if [ "$EXIT_CODE" -ne 0 ] || [ -z "$SELECTED" ]; then
+      echo "No SDK selected. Aborting." >&2
+      exit 1
+    fi
+
+    export SDK_VERSION="$SELECTED"
+    echo "Selected SDK version: $SDK_VERSION"
+  fi
+fi
+
+source tools/tools.sh
 
 if [ -n "$SDK_VERSION" ]; then
   echo "SDK VERSION set in environment variable: $SDK_VERSION"

@@ -9,7 +9,7 @@
 # darling-dmg will be downloaded and compiled if missing.
 #
 
-pushd "${0%/*}/.." &>/dev/null
+pushd "${0%/*}/.." &>/dev/null || exit 1
 source tools/tools.sh
 
 if [ $PLATFORM == "Darwin" ]; then
@@ -54,24 +54,24 @@ fi
 
 set -e
 
-pushd $BUILD_DIR &>/dev/null
+pushd "$BUILD_DIR" &>/dev/null || exit 1
 
 FULL_CLONE=1 \
   get_sources https://github.com/LubosD/darling-dmg.git master
 
 if [ $f_res -eq 1 ]; then
-  pushd $CURRENT_BUILD_PROJECT_NAME &>/dev/null
+  pushd "$CURRENT_BUILD_PROJECT_NAME" &>/dev/null || exit 1
   git reset --hard 5f64bc9a3795e0a1c307e9beb099f9035fdd864f
   mkdir -p build
-  pushd build &>/dev/null
+  pushd build &>/dev/null || exit 1
   $CMAKE .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$TARGET_DIR_SDK_TOOLS
   $MAKE -j $JOBS install
-  popd &>/dev/null
-  popd &>/dev/null
+  popd &>/dev/null || exit 1
+  popd &>/dev/null || exit 1
   build_success
 fi
 
-popd &>/dev/null # build dir
+popd &>/dev/null || exit 1 # build dir
 
 TMP=$(mktemp -d)
 

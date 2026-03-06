@@ -59,6 +59,26 @@ int env(int argc, char **argv) {
 
   vars["PATH"] = joinPath(path);
 
+  // Add $TARGET_DIR/lib to LD_LIBRARY_PATH so tools like ld can find libtapi
+  {
+    std::string libpath = std::string(epath) + "/../lib";
+    char resolved[PATH_MAX + 1];
+    if (realpath(libpath.c_str(), resolved) && dirExists(resolved)) {
+#ifdef __APPLE__
+      const char *ldpathvar = "DYLD_LIBRARY_PATH";
+#else
+      const char *ldpathvar = "LD_LIBRARY_PATH";
+#endif
+      char *oldldpath = getenv(ldpathvar);
+      std::vector<std::string> ldpath;
+      if (oldldpath)
+        splitPath(oldldpath, ldpath);
+      if (!hasPath(ldpath, resolved))
+        ldpath.insert(ldpath.begin(), resolved);
+      vars[ldpathvar] = joinPath(ldpath);
+    }
+  }
+
   auto printVariable = [&](const std::string & var)->bool {
     auto it = vars.find(var);
     if (it == vars.end()) {

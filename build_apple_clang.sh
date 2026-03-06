@@ -2,11 +2,11 @@
 
 # Builds the Apple version of Clang/LLVM
 
-pushd "${0%/*}" &>/dev/null || exit
+pushd "${0%/*}" &>/dev/null || exit 1
 
 if [ -z "$CLANG_VERSION" ]; then
   CLANG_VERSION=22
 fi
 
-GITPROJECT=apple CLANG_VERSION=$CLANG_VERSION \
+GITPROJECT=apple CLANG_VERSION="$CLANG_VERSION" \
   ./build_clang.sh

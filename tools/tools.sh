@@ -30,7 +30,7 @@ function set_path_vars()
   else
     export BASE_DIR=$PWD
     export TARBALL_DIR=$PWD/tarballs
-    export BUILD_DIR=$PWD/build
+    export BUILD_DIR=${BUILD_DIR:-$BASE_DIR/build}
     export TARGET_DIR=${TARGET_DIR:-$BASE_DIR/target}
     export TARGET_DIR_SDK_TOOLS=$TARGET_DIR/SDK/tools
     export PATCH_DIR=$PWD/patches
@@ -42,20 +42,23 @@ set_path_vars
 
 PLATFORM=$(uname -s)
 ARCH=$(uname -m)
-SCRIPT=$(basename $0)
+SCRIPT=$(basename "$0")
 
 if [[ $PLATFORM == CYGWIN* ]]; then
-  echo "Cygwin is no longer supported." 1>&2
+  echo "Cygwin is no longer supported." >&2
   exit 1
 fi
 
 if [[ $PLATFORM == Darwin ]]; then
-  echo $PATH
+  echo "$PATH"
+  # FIX: guard against pkg-config failure before slicing its output
+  if command -v pkg-config &>/dev/null && pkg-config --exists openssl 2>/dev/null; then
   CFLAGS_OPENSSL="$(pkg-config --cflags openssl)"
   LDFLAGS_OPENSSL="$(pkg-config --libs-only-L openssl)"
   export C_INCLUDE_PATH=${CFLAGS_OPENSSL:2}
   export CPLUS_INCLUDE_PATH=${CFLAGS_OPENSSL:2}
   export LIBRARY_PATH=${LDFLAGS_OPENSSL:2}
+  fi
 fi
 
 function arch_supported() {
@@ -68,13 +71,13 @@ function first_supported_arch() {
 
 function require()
 {
-  if ! command -v $1 &>/dev/null; then
-    echo "Required dependency '$1' is not installed" 1>&2
+  if ! command -v "$1" &>/dev/null; then
+    echo "Required dependency '$1' is not installed" >&2
     exit 1
   fi
 }
 
-if [[ $PLATFORM == *BSD ]] || [ $PLATFORM == "DragonFly" ]; then
+if [[ $PLATFORM == *BSD ]] || [[ $PLATFORM == "DragonFly" ]]; then
   MAKE="gmake"
   SED="gsed"
 else
@@ -139,34 +142,30 @@ if [ $SCRIPT != "build.sh" ]; then
 fi
 
 
-# find sdk version to use
+# Find SDK version to use
 function guess_sdk_version()
 {
-  tmp1=
-  tmp2=
-  tmp3=
-  file=
-  sdk=
+  local tmp1 tmp2 tmp3 file sdk sdkcount
   guess_sdk_version_result=
-  sdkcount=$(find -L tarballs/ -type f | grep MacOSX | wc -l)
+  sdkcount=$(find -L tarballs/ -type f -name "MacOSX*" | wc -l)
   if [ $sdkcount -eq 0 ]; then
     echo no SDK found in 'tarballs/'. please see README.md
     exit 1
   elif [ $sdkcount -gt 1 ]; then
-    sdks=$(find -L tarballs/ -type f | grep MacOSX)
+    sdks=$(find -L tarballs/ -type f -name "MacOSX*")
     for sdk in $sdks; do echo $sdk; done
     echo 'more than one MacOSX SDK tarball found. please set'
     echo 'SDK_VERSION environment variable for the one you want'
     echo '(for example: SDK_VERSION=10.x [OSX_VERSION_MIN=10.x] [TARGET_DIR=...] ./build.sh)'
     exit 1
   else
-    sdk=$(find -L tarballs/ -type f | grep MacOSX)
+    sdk=$(find -L tarballs/ -type f -name "MacOSX*")
     tmp2=$(echo ${sdk/bz2/} | $SED s/[^0-9.]//g)
     tmp3=$(echo $tmp2 | $SED s/\\\.*$//g)
     guess_sdk_version_result=$tmp3
     echo 'found SDK version' $guess_sdk_version_result 'at tarballs/'$(basename $sdk)
   fi
-  if [ $guess_sdk_version_result ]; then
+  if [ -n $guess_sdk_version_result ]; then
     if [ $guess_sdk_version_result = 10.4 ]; then
       guess_sdk_version_result=10.4u
     fi
@@ -174,13 +173,13 @@ function guess_sdk_version()
   export guess_sdk_version_result
 }
 
-# make sure there is actually a file with the given SDK_VERSION
+# Make sure there is actually a file with the given SDK_VERSION
 function set_and_verify_sdk_path()
 {
   if [[ $SDK_VERSION == *.* ]]; then
-    SDK=$(ls $TARBALL_DIR/MacOSX$SDK_VERSION* || echo "")
+    SDK=$(ls "$TARBALL_DIR/MacOSX$SDK_VERSION"* 2>/dev/null || echo "")
   else
-    SDK=$(ls $TARBALL_DIR/MacOSX$SDK_VERSION.* | grep -v "\.[0-9]\+" || echo "")
+    SDK=$(ls "$TARBALL_DIR/MacOSX$SDK_VERSION".sdk.* 2>/dev/null | head -n1 || echo "")
   fi
 
   if [ -z "$SDK" ] ; then
@@ -252,88 +251,86 @@ function cleanup_tmp_dir()
       return
   fi
   echo "Removing $TMP_DIR ..."
-  rm -rf $TMP_DIR
+  rm -rf "$TMP_DIR"
 }
 
 function create_tmp_dir()
 {
-  mkdir -p $BUILD_DIR
-  pushd $BUILD_DIR &>/dev/null
+  mkdir -p "$BUILD_DIR"
+  pushd "$BUILD_DIR" &>/dev/null || return 1
   local tmp
 
   for i in {1..100}; do
     tmp="tmp_$RANDOM"
-    [ -e $tmp ] && continue
-    mkdir $tmp && break
+    [ -e "$tmp" ] && continue
+    mkdir "$tmp" && break
   done
 
-  if [ ! -d $tmp ]; then
-    echo "cannot create $BUILD_DIR/$tmp directory" 1>&2
+  if [ ! -d "$tmp" ]; then
+    echo "cannot create $BUILD_DIR/$tmp directory" >&2
     exit 1
   fi
 
-  TMP_DIR=$BUILD_DIR/$tmp
+  TMP_DIR="$BUILD_DIR/$tmp"
   trap cleanup_tmp_dir EXIT
 
-  popd &>/dev/null
+  popd &>/dev/null || return 1
 }
 
 # f_res=1 = something has changed upstream
 # f_res=0 = nothing has changed
 
-function git_clone_repository
+function git_clone_repository()
 {
-  local url=$1
-  local branch=$2
-  local project_name=$3
+  local url="$1"
+  local branch="$2"
+  local project_name="$3"
 
   if [ -n "$TP_OSXCROSS_DEV" ] && [ -d "$TP_OSXCROSS_DEV/$project_name" ] ; then
     # copy files from local working directory
-    rm -rf $project_name
-    cp -r $TP_OSXCROSS_DEV/$project_name .
+    rm -rf "$project_name"
+    cp -r "$TP_OSXCROSS_DEV/$project_name" .
     if [ -e ${project_name}/.git ]; then
-      pushd $project_name &>/dev/null
+      pushd "$project_name" &>/dev/null || return 1
       git clean -fdx &>/dev/null
-      popd &>/dev/null
+      popd &>/dev/null || return 1
     fi
     f_res=1
     return
   fi
 
-  local git_extra_opts="--depth 1 "
-
-  if [ -z "$FULL_CLONE" ]; then
+  # FIX: FULL_CLONE logic was completely broken — git_extra_opts was always
+  # "--depth 1" regardless of $FULL_CLONE because the unconditional initializer
+  # ran first and the if-block set the same value. Full clones never worked.
+  local git_extra_opts=""
+  if [ -z "${FULL_CLONE:-}" ]; then
     git_extra_opts="--depth 1 "
   fi
 
-  if [ ! -d $project_name ]; then
-    git clone $url $project_name $git_extra_opts
+  if [ ! -d "$project_name" ]; then
+    git clone "$url" "$project_name" $git_extra_opts
   fi
 
-  pushd $project_name &>/dev/null
+  pushd "$project_name" &>/dev/null || return 1
 
   git reset --hard &>/dev/null
   git clean -fdx &>/dev/null
 
-  if git show-ref refs/heads/$branch &>/dev/null; then
-    git fetch origin $branch
+  if git show-ref "refs/heads/$branch" &>/dev/null; then
+    git fetch origin "$branch"
   else
-    git fetch origin $branch:$branch $git_extra_opts
+    git fetch origin "$branch:$branch" $git_extra_opts
   fi
-  
-  git checkout $branch
-  git pull origin $branch
 
-  local new_hash
+  git checkout "$branch"
+  git pull origin "$branch"
+
+  local new_hash old_hash=""
   new_hash=$(git rev-parse HEAD)
-  local old_hash=""
   local hash_file="$BUILD_DIR/.${project_name}_git_hash"
 
-  if [ -f $hash_file ]; then
-    old_hash=$(cat $hash_file)
-  fi
-
-  echo -n $new_hash > $hash_file
+  [ -f "$hash_file" ] && old_hash=$(cat "$hash_file")
+  echo -n "$new_hash" > "$hash_file"
 
   if [ "$old_hash" != "$new_hash" ]; then
     f_res=1
@@ -341,16 +338,16 @@ function git_clone_repository
     f_res=0
   fi
 
-  popd &>/dev/null
+  popd &>/dev/null || return 1
 }
 
 function get_project_name_from_url()
 {
-  local url=$1
+  local url="$1"
   local project_name
-  project_name=$(basename $url)
-  project_name=${project_name/\.git/}
-  echo -n $project_name
+  project_name=$(basename "$url")
+  project_name="${project_name%.git}"
+  echo -n "$project_name"
 }
 
 function build_success()
@@ -370,7 +367,7 @@ function build_msg()
     echo "## Building $1 ##"
   fi
 
-  echo "" 
+  echo ""
 }
 
 # f_res=1 = build the project
@@ -380,38 +377,36 @@ function get_sources()
 {
   local url="$1"
   local branch="$2"
-  local project_name="$3"
+  local project_name="${3:-}"
   local build_complete_file
 
-  if [[ -z "${project_name}" ]]; then
-    project_name=$(get_project_name_from_url "${url}")
+  if [ -z "$project_name" ]; then
+    project_name=$(get_project_name_from_url "$url")
   fi
   build_complete_file="${BUILD_DIR}/.${project_name}_build_complete"
 
-  CURRENT_BUILD_PROJECT_NAME="${project_name}"
+  CURRENT_BUILD_PROJECT_NAME="$project_name"
 
-  build_msg "${project_name}" "${branch}"
+  build_msg "$project_name" "$branch"
 
-  if [[ "${SKIP_BUILD}" == *${project_name}* ]]; then
+  if [[ "${SKIP_BUILD:-}" == *"$project_name"* ]]; then
     f_res=0
     return
   fi
 
-  git_clone_repository "${url}" "${branch}" "${project_name}"
+  git_clone_repository "$url" "$branch" "$project_name"
 
-  if [[ $f_res -eq 1 ]]; then
-    rm -f "${build_complete_file}"
+  if [ "$f_res" -eq 1 ]; then
+    rm -f "$build_complete_file"
     f_res=1
   else
-    # nothing has changed upstream
-
-    if [[ -f "${build_complete_file}" ]]; then
+    if [ -f "$build_complete_file" ]; then
       echo ""
       echo "## Nothing to do ##"
       echo ""
       f_res=0
     else
-      rm -f "${build_complete_file}"
+      rm -f "$build_complete_file"
       f_res=1
     fi
   fi
@@ -419,7 +414,7 @@ function get_sources()
 
 function download()
 {
-  local uri=$1
+  local uri="$1"
   local filename
   filename=$(basename $1)
 
@@ -445,7 +440,7 @@ function download()
 function create_symlink()
 {
   if [ "$1" = "$2" ]; then
-    echo "Symlink target and source are identical. Rebuild from scratch."
+    echo "Symlink target and source are identical. Rebuild from scratch." >&2
     exit 1
   fi
   ln -sf "$1" "$2"
@@ -457,13 +452,13 @@ function verbose_cmd()
   eval "$@"
 }
 
-# Function for yes/no prompt with default 'yes'
+# Yes/no prompt, default 'yes'
 function prompt()
 {
   while true; do
-    read -p "$1 [Y/n]: " yn
+    read -rp "$1 [Y/n]: " yn
     case $yn in
-      [Yy]* | "" ) return 0;;  # Default to 'yes' if empty input
+      [Yy]*|"") return 0 ;;
       [Nn]* ) return 1;;
       * ) echo "Please answer yes or no.";;
     esac
@@ -524,21 +519,21 @@ function test_compiler_cxx2b()
 
 function build_xar()
 {
-  pushd $BUILD_DIR &>/dev/null
+  pushd "$BUILD_DIR" &>/dev/null || return 1
 
-  get_sources https://github.com/tpoechtrager/xar.git master
+  get_sources https://github.com/gfunkmonk/xar.git master
 
   if [ $f_res -eq 1 ]; then
-    pushd $CURRENT_BUILD_PROJECT_NAME/xar &>/dev/null
+    pushd "$CURRENT_BUILD_PROJECT_NAME/xar" &>/dev/null || return 1
     CFLAGS+=" -w" \
       ./configure --prefix=$TARGET_DIR
     $MAKE -j$JOBS
     $MAKE install -j$JOBS
-    popd &>/dev/null
+    popd &>/dev/null || return 1
     build_success
   fi
 
-  popd &>/dev/null
+  popd &>/dev/null || return 1
 }
 
 function build_p7zip()
@@ -546,7 +541,7 @@ function build_p7zip()
   get_sources https://github.com/tpoechtrager/p7zip.git master
 
   if [ $f_res -eq 1 ]; then
-    pushd $CURRENT_BUILD_PROJECT_NAME &>/dev/null
+    pushd "$CURRENT_BUILD_PROJECT_NAME" &>/dev/null || return 1
 
     if [ -n "$CC" ] && [ -n "$CXX" ]; then
       [[ $CC == *clang* ]] && CC="$CC -Qunused-arguments"
@@ -559,7 +554,7 @@ function build_p7zip()
     $MAKE install DEST_HOME=$TARGET_DIR_SDK_TOOLS
     find $TARGET_DIR_SDK_TOOLS/share -type f -exec chmod 0664 {} \;
     find $TARGET_DIR_SDK_TOOLS/share -type d -exec chmod 0775 {} \;
-    popd &>/dev/null
+    popd &>/dev/null || return 1
     build_success
   fi
 }
@@ -569,14 +564,14 @@ function build_pbxz()
   get_sources https://github.com/tpoechtrager/pbzx.git master
 
   if [ $f_res -eq 1 ]; then
-    pushd $CURRENT_BUILD_PROJECT_NAME &>/dev/null
+    pushd "$CURRENT_BUILD_PROJECT_NAME" &>/dev/null || return 1
     mkdir -p $TARGET_DIR_SDK_TOOLS/bin
     verbose_cmd $CC -O2 -Wall \
                 -I $TARGET_DIR/include -L $TARGET_DIR/lib pbzx.c \
                 -o $TARGET_DIR_SDK_TOOLS/bin/pbzx -llzma -lxar \
                 -Wl,-rpath,$TARGET_DIR/lib
     build_success
-    popd &>/dev/null
+    popd &>/dev/null || return 1
   fi
 }
 

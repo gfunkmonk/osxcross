@@ -31,13 +31,13 @@ require $MAKE
 [ -n "$CC" ] && require $CC
 [ -n "$CXX" ] && require $CXX
 
-pushd $BUILD_DIR &>/dev/null
+pushd "$BUILD_DIR" &>/dev/null || exit 1
 build_p7zip
 popd &>/dev/null
 
 create_tmp_dir
 
-pushd $TMP_DIR &>/dev/null
+pushd "$TMP_DIR" &>/dev/null || exit 1
 
 set +e
 
@@ -57,7 +57,7 @@ fi
 
 set -e
 
-popd &>/dev/null
+popd &>/dev/null || exit 1
 
-XCODEDIR="$TMP_DIR/$(ls $TMP_DIR | grep "code" | head -n1)" \
+XCODEDIR="$TMP_DIR/$(cd "$TMP_DIR" && ls -d *code* 2>/dev/null | head -n1)" \
   ./tools/gen_sdk_package.sh

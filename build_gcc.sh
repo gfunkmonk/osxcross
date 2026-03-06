@@ -6,7 +6,7 @@
 # gcc. Please refer to the README.md for details.
 #
 
-pushd "${0%/*}" &>/dev/null
+pushd "${0%/*}" &>/dev/null || exit 1
 
 unset LIBRARY_PATH
 
@@ -14,8 +14,7 @@ DESC=gcc
 USESYSTEMCOMPILER=1
 source tools/tools.sh
 
-# GCC version to build
-# (<4.7 will not work properly with libc++)
+# GCC version to build (< 4.7 will not work properly with libc++)
 if [ -z "$GCC_VERSION" ]; then
   GCC_VERSION=15.2.0
   #GCC_VERSION=5-20200228 # snapshot
@@ -40,7 +39,7 @@ fi
 GCC_MIRROR="https://ftp.fu-berlin.de/unix/languages/gcc/releases/"
 GCC_MIRROR_WITH_SNAPSHOTS="https://mirror.koddos.net/gcc"
 
-pushd $BUILD_DIR &>/dev/null
+pushd $BUILD_DIR &>/dev/null || exit 1
 
 function remove_locks()
 {
@@ -51,13 +50,13 @@ source $BASE_DIR/tools/trap_exit.sh
 
 if [ ! -f "have_gcc_${GCC_VERSION}_${TARGET}" ]; then
 
-pushd $TARBALL_DIR &>/dev/null
+pushd $TARBALL_DIR &>/dev/null || exit 1
 if [[ $GCC_VERSION != *-* ]]; then
   download "$GCC_MIRROR/gcc-$GCC_VERSION/gcc-$GCC_VERSION.tar.xz"
 else
   download "$GCC_MIRROR_WITH_SNAPSHOTS/snapshots/$GCC_VERSION/gcc-$GCC_VERSION.tar.xz"
 fi
-popd &>/dev/null
+popd &>/dev/null || exit 1
 
 echo "cleaning up ..."
 rm -rf gcc* 2>/dev/null
@@ -65,7 +64,7 @@ rm -rf gcc* 2>/dev/null
 extract "$TARBALL_DIR/gcc-$GCC_VERSION.tar.xz"
 echo ""
 
-pushd gcc*$GCC_VERSION* &>/dev/null
+pushd gcc*$GCC_VERSION* &>/dev/null || exit 1
 
 rm -f $TARGET_DIR/bin/*-gcc*
 rm -f $TARGET_DIR/bin/*-g++*
@@ -111,17 +110,21 @@ fi
 
 
 mkdir -p build
-pushd build &>/dev/null
+pushd build &>/dev/null || exit 1
 
-if [[ $PLATFORM == *BSD ]]; then
-  export CPATH="/usr/local/include:/usr/pkg/include:$CPATH"
-  export LDFLAGS="-L/usr/local/lib -L/usr/pkg/lib $LDFLAGS"
-  export LD_LIBRARY_PATH="/usr/local/lib:/usr/pkg/lib:$LD_LIBRARY_PATH"
-elif [ "$PLATFORM" == "Darwin" ]; then
-  export CPATH="/opt/local/include:$CPATH"
-  export LDFLAGS="-L/opt/local/lib $LDFLAGS"
-  export LD_LIBRARY_PATH="/opt/local/lib:$LD_LIBRARY_PATH"
-fi
+  # Platform-specific include/lib paths
+  case "$PLATFORM" in
+    *BSD)
+      export CPATH="/usr/local/include:/usr/pkg/include:${CPATH:-}"
+      export LDFLAGS="-L/usr/local/lib -L/usr/pkg/lib ${LDFLAGS:-}"
+      export LD_LIBRARY_PATH="/usr/local/lib:/usr/pkg/lib:${LD_LIBRARY_PATH:-}"
+      ;;
+    Darwin)
+      export CPATH="/opt/local/include:${CPATH:-}"
+      export LDFLAGS="-L/opt/local/lib ${LDFLAGS:-}"
+      export LD_LIBRARY_PATH="/opt/local/lib:${LD_LIBRARY_PATH:-}"
+      ;;
+  esac
 
 EXTRACONFFLAGS=""
 
@@ -131,10 +134,7 @@ if [ "$PLATFORM" != "Darwin" ]; then
 fi
 
 LANGS="c,c++,objc,obj-c++"
-
-if [ -n "$ENABLE_FORTRAN" ]; then
-  LANGS+=",fortran"
-fi
+  [ -n "${ENABLE_FORTRAN:-}" ] && LANGS+=",fortran"
 
 if [ $(osxcross-cmp $SDK_VERSION "<=" 10.13) -eq 1 ]; then
   EXTRACONFFLAGS+="--with-multilib-list=m32,m64 --enable-multilib "
@@ -160,29 +160,29 @@ $MAKE install
 
 GCC_VERSION=$(echo $GCC_VERSION | tr '-' ' ' |  awk '{print $1}')
 
-pushd $TARGET_DIR/x86_64-apple-$TARGET/include &>/dev/null
-pushd c++/${GCC_VERSION}* &>/dev/null
+pushd $TARGET_DIR/x86_64-apple-$TARGET/include &>/dev/null || exit 1
+pushd c++/${GCC_VERSION}* &>/dev/null || exit 1
 
 cat $PATCH_DIR/libstdcxx.patch | \
   $SED "s/darwin13/$TARGET/g" | \
   patch -p0 -l &>/dev/null || true
 
-popd &>/dev/null
-popd &>/dev/null
+popd &>/dev/null || exit 1
+popd &>/dev/null || exit 1
 
-popd &>/dev/null # build
-popd &>/dev/null # gcc
+popd &>/dev/null  || exit 1 # build
+popd &>/dev/null  || exit 1 # gcc
 
 touch "have_gcc_${GCC_VERSION}_${TARGET}"
 
 fi # have gcc
 
-popd &>/dev/null # build dir
+popd &>/dev/null  || exit 1 # build dir
 
 unset USESYSTEMCOMPILER
 source tools/tools.sh
 
-pushd $TARGET_DIR/bin &>/dev/null
+pushd $TARGET_DIR/bin &>/dev/null || exit 1
 
 if [ ! -f i386-apple-$TARGET-base-gcc ]; then
   mv x86_64-apple-$TARGET-gcc \
@@ -202,8 +202,7 @@ fi
 
 echo "compiling wrapper ..."
 
-TARGETCOMPILER=gcc \
-  $BASE_DIR/wrapper/build_wrapper.sh
+TARGETCOMPILER=gcc "$BASE_DIR/wrapper/build_wrapper.sh"
 
 popd &>/dev/null # wrapper dir
 

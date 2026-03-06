@@ -6,7 +6,7 @@
 # Please refer to README.COMPILER-RT.md for details.
 #
 
-pushd "${0%/*}" &>/dev/null
+pushd "${0%/*}" &>/dev/null || exit 1
 
 DESC=compiler-rt
 source tools/tools.sh
@@ -61,8 +61,9 @@ case $CLANG_VERSION in
   19.* ) BRANCH=release/19.x;    USE_CMAKE=1; ;;
   20.* ) BRANCH=release/20.x;    USE_CMAKE=1; ;;
   21.* ) BRANCH=release/21.x;    USE_CMAKE=1; ;;
-  22.* ) BRANCH=main;            USE_CMAKE=1; ;;
-     * ) echo "Unsupported Clang version, must be >= 3.2 and <= 22.x" 1>&2; exit 1;
+  22.* ) BRANCH=release/22.x;    USE_CMAKE=1; ;;
+  23.* ) BRANCH=main;            USE_CMAKE=1; ;;
+     * ) echo "Unsupported Clang version, must be >= 3.2 and <= 23.x" 1>&2; exit 1;
 esac
 
 if [ $(osxcross-cmp $CLANG_VERSION ">=" 3.5) -eq 1 ]; then
@@ -78,6 +79,11 @@ then
   exit 1
 fi
 
+export OSX_ARCHS="x86_64;x86_64h"
+if [ $(osxcross-cmp $SDK_VERSION ">=" 11.0) -eq 1 ]; then
+  export OSX_ARCHS="$OSX_ARCHS;arm64"
+fi
+
 HAVE_OS_LOCK=0
 
 if echo "#include <os/lock.h>" | xcrun clang -E - &>/dev/null; then
@@ -88,18 +94,18 @@ export OSXCROSS_NO_10_5_DEPRECATION_WARNING=1
 
 mkdir -p $BUILD_DIR
 
-pushd $BUILD_DIR &>/dev/null
+pushd $BUILD_DIR &>/dev/null || exit 1
 
 # Check if a build project for compiler-rt already exists.
 # Delete any directory that is called compiler-rt, but is not a build project.
-if [ -d "$BUILD_DIR/compiler-rt" ] && [ ! -d "$BUILD_DIR/compiler_rt/compiler-rt" ]; then
+if [ -d "$BUILD_DIR/compiler-rt" ] && [ ! -d "$BUILD_DIR/compiler-rt/compiler-rt" ]; then
     rm -rf "$BUILD_DIR/compiler-rt"
 fi
 
 get_sources https://github.com/llvm/llvm-project.git $BRANCH "compiler-rt"
 
 if [ $f_res -eq 1 ]; then
-  pushd "$CURRENT_BUILD_PROJECT_NAME/compiler-rt" &>/dev/null
+  pushd "$CURRENT_BUILD_PROJECT_NAME/compiler-rt" &>/dev/null || exit 1
 
   if [ $(osxcross-cmp $SDK_VERSION "<=" 10.11) -eq 1 ]; then
     # https://github.com/tpoechtrager/osxcross/issues/178
@@ -183,9 +189,11 @@ if [ $f_res -eq 1 ]; then
       fi
 
       mkdir $build_dir
-      pushd $build_dir &>/dev/null
+      pushd $build_dir &>/dev/null || return 1
 
       CC=$(xcrun -f clang) CXX=$(xcrun -f clang++) $CMAKE .. \
+        -DDARWIN_osx_ARCHS="$OSX_ARCHS" \
+        -DDARWIN_osx_BUILTIN_ARCHS="$OSX_ARCHS" \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_SYSTEM_NAME=Darwin \
         -DCOMPILER_RT_ENABLE_IOS=OFF \
@@ -196,7 +204,7 @@ if [ $f_res -eq 1 ]; then
 
       $MAKE -j $JOBS $EXTRA_MAKE_FLAGS
 
-      popd &>/dev/null
+      popd &>/dev/null || return 1
     }
 
     if [ $(osxcross-cmp $SDK_VERSION ">=" 11.0) -eq 1 ] &&
@@ -208,9 +216,9 @@ if [ $f_res -eq 1 ]; then
       {
         tmp=$(mktemp -d)
         [ -z "$tmp" ] && exit 1
-        pushd $tmp &>/dev/null
+        pushd $tmp &>/dev/null || return 1
 
-        for arch in $*; do
+        for arch in "$@"; do
           if echo "int main(){}" | xcrun clang -arch $arch -xc -o test - &>/dev/null; then
             rm test
             [ -n "$ARCHS" ] && ARCHS+=" "
@@ -218,7 +226,7 @@ if [ $f_res -eq 1 ]; then
           fi
         done
 
-        popd &>/dev/null
+        popd &>/dev/null || return 1
         rmdir $tmp
       }
 
@@ -261,7 +269,8 @@ if [ $f_res -eq 1 ]; then
 
       arch1=$(echo $ARCHS | awk '{print $1}')
 
-      for file in $(ls build_$arch1/lib/darwin/); do
+      for file in build_"$arch1"/lib/darwin/*; do
+        file="${file##*/}"
         libs=""
 
         for arch in $ARCHS; do
@@ -329,7 +338,7 @@ function print_or_run() {
   if [ -z "$ENABLE_COMPILER_RT_INSTALL" ]; then
     echo "$@"
   else
-    $@
+    "$@"
   fi
 }
 
@@ -365,7 +374,7 @@ else
 
   ### MAKE ###
 
-  pushd "clang_darwin" &>/dev/null
+  pushd "clang_darwin" &>/dev/null || exit 1
 
   function print_install_command() {
     if [ -f "$1" ]; then
@@ -385,7 +394,7 @@ else
   print_install_command "asan_osx_dynamic/libcompiler_rt.dylib" \
     "libclang_rt.asan_osx_dynamic.dylib"
 
-  popd &>/dev/null
+  popd &>/dev/null || exit 1
 
   ### MAKE END ###
 

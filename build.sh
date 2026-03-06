@@ -7,11 +7,129 @@
 
 VERSION=1.5
 
+TAPI_VERSION=1600.0.11.8
+CCTOOLS_VERSION=1030.6.3
+LINKER_VERSION=956.6
+
+WARNFLAGS="-Wno-cast-function-type-mismatch -Wno-unused-but-set-variable \
+        -Wno-unnecessary-virtual-specifier -Wno-unused-variable -Wno-parentheses \
+        -Wno-unused-parameter -Wno-non-virtual-dtor -Wno-ignored-optimization-argument \
+        -Wno-variadic-macros -Wno-deprecated-declarations -Wno-ctad-maybe-unsupported"
+export CFLAGS="${CFLAGS:-} -O2 -pipe -fomit-frame-pointer ${WARNFLAGS}"
+export CXXFLAGS="${CXXFLAGS:-} -O2 -pipe -fomit-frame-pointer ${WARNFLAGS}"
+
 pushd "${0%/*}" &>/dev/null
+
+usage() {
+  echo -e "\x1B[1;37m Usage: ./build.sh [ OPTIONS ]\x1B[0m"
+  echo -e ""
+  echo -e "\x1B[1;37m Options:\x1B[0m"
+  echo -e ""
+  echo -e "\x1B[1;37m   -i, --interactive      \x1B[1;32mShow a menu of SDK versions found in tarballs/ and\x1B[0m"
+  echo -e "\x1B[1;32m                          select one interactively. Has no effect if SDK_VERSION\x1B[0m"
+  echo -e "\x1B[1;32m                          is already set. (needs dialog or whiptail)\x1B[0m"
+  echo -e ""
+  echo -e "\x1B[1;37m   -u, --unattended       \x1B[1;33mSkip all interactive prompts (equivalent to UNATTENDED=1).\x1B[0m"
+  echo -e ""
+  echo -e "\x1B[1;37m   -t, --targetdir <dir>  \x1B[1;36mSet the install directory (equivalent to TARGET_DIR=<dir>).\x1B[0m"
+  echo -e ""
+  echo -e "\x1B[1;37m   -b, --builddir <dir>   \x1B[1;35mSet the build directory (equivalent to BUILD_DIR=<dir>).\x1B[0m"
+  echo -e ""
+  echo -e "\x1B[1;37m   -a, --archs <dir>      \x1B[1;34mOverrides target archs (i.e. -a i386 = builds only i386).\x1B[0m"
+  echo -e ""
+
+}
+
+INTERACTIVE=0
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -h|--help|help) usage; exit 0 ;;
+    -i|--interactive) INTERACTIVE=1;  shift ;;
+    -u|--unattended)  UNATTENDED=1;   shift ;;
+    -t|--targetdir)
+      if [[ $# -lt 2 || "$2" == -* ]]; then
+        echo "error: $1 requires a directory argument" >&2; exit 1
+      fi
+      export TARGET_DIR="$2"; shift 2 ;;
+    -b|--builddir)
+      if [[ $# -lt 2 || "$2" == -* ]]; then
+        echo "error: $1 requires a directory argument" >&2; exit 1
+      fi
+      export BUILD_DIR="$2"; shift 2 ;;
+    -a|--archs)
+      if [[ $# -lt 2 || "$2" == -* ]]; then
+        echo "error: $1 requires an argument" >&2; exit 1
+      fi
+      export SUPPORTED_ARCHS="${2%/}"; shift 2 ;;
+    *) echo "error: unknown argument: $1" >&2; usage; exit 1 ;;
+  esac
+done
+
+if [ "$INTERACTIVE" -eq 1 ]; then
+  if [ -n "${SDK_VERSION:-}" ]; then
+    echo "SDK_VERSION already set in environment ($SDK_VERSION); skipping interactive picker."
+  else
+    # Require whiptail or dialog
+    if command -v whiptail &>/dev/null; then
+      DIALOG=whiptail
+    elif command -v dialog &>/dev/null; then
+      DIALOG=dialog
+    else
+      echo "error: --interactive requires 'whiptail' or 'dialog' to be installed." >&2
+      echo "  Install with: sudo apt-get install whiptail  (or: sudo apt-get install dialog)" >&2
+      exit 1
+    fi
+
+    # Collect SDK tarballs and extract version strings
+    SDK_ENTRIES=()
+    while IFS= read -r tarball; do
+      version=$(basename "$tarball" | sed -E 's/^MacOSX//; s/\.sdk\.tar\..+$//')
+      [ -n "$version" ] && SDK_ENTRIES+=("$version" "$tarball")
+    done < <(find tarballs/ -maxdepth 1 -type f \
+               -name "MacOSX*.sdk.tar.*" | sort -V)
+
+    if [ ${#SDK_ENTRIES[@]} -eq 0 ]; then
+      echo "error: No SDK tarballs found in tarballs/." >&2
+      echo "  Expected files matching: tarballs/MacOSX*.sdk.tar.*" >&2
+      exit 1
+    fi
+
+    MENU_ITEMS=()
+    for (( i=0; i<${#SDK_ENTRIES[@]}; i+=2 )); do
+      ver="${SDK_ENTRIES[$i]}"
+      path="${SDK_ENTRIES[$((i+1))]}"
+      MENU_ITEMS+=("$ver" "$(basename "$path")")
+    done
+
+    RESULT_FILE=$(mktemp)
+    trap 'rm -f "$RESULT_FILE"' EXIT
+
+    "$DIALOG" \
+      --clear \
+      --title "OSXCross SDK Selector" \
+      --menu "Select the SDK version to build against:" \
+      20 60 12 \
+      "${MENU_ITEMS[@]}" \
+      2>"$RESULT_FILE" >/dev/tty
+
+    EXIT_CODE=$?
+    SELECTED=$(cat "$RESULT_FILE")
+    rm -f "$RESULT_FILE"
+    trap - EXIT
+
+    if [ "$EXIT_CODE" -ne 0 ] || [ -z "$SELECTED" ]; then
+      echo "No SDK selected. Aborting." >&2
+      exit 1
+    fi
+
+    export SDK_VERSION="$SELECTED"
+    echo "Selected SDK version: $SDK_VERSION"
+  fi
+fi
 
 source tools/tools.sh
 
-if [ $SDK_VERSION ]; then
+if [ -n "$SDK_VERSION" ]; then
   echo "SDK VERSION set in environment variable: $SDK_VERSION"
 else
   guess_sdk_version
@@ -26,6 +144,8 @@ case $SDK_VERSION in
     exit 1
       ;;
 esac
+
+_USER_SUPPORTED_ARCHS="${SUPPORTED_ARCHS:-}"
 
 case $SDK_VERSION in
   10.6*)   TARGET=darwin10;   SUPPORTED_ARCHS="i386 x86_64"; NEED_TAPI_SUPPORT=0; OSX_VERSION_MIN_INT=10.6 ;;
@@ -48,10 +168,10 @@ case $SDK_VERSION in
   12.2*)   TARGET=darwin21.3; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.9 ;;
   12.3*)   TARGET=darwin21.4; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.9 ;;
   12.4*)   TARGET=darwin21.5; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.9 ;;
-  13|13.0*) TARGET=darwin22.1; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.9 ;;
-  13.1*)   TARGET=darwin22.2; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.9 ;;
-  13.2*)   TARGET=darwin22.3; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.9 ;;
-  13.3*)   TARGET=darwin22.4; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.9 ;;
+  13|13.0*) TARGET=darwin22.1; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.13 ;;
+  13.1*)   TARGET=darwin22.2; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.13 ;;
+  13.2*)   TARGET=darwin22.3; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.13 ;;
+  13.3*)   TARGET=darwin22.4; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.13 ;;
   14|14.0*) TARGET=darwin23;   SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.13 ;;
   14.1*)   TARGET=darwin23.1; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.13 ;;
   14.2*)   TARGET=darwin23.2; SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.13 ;;
@@ -68,8 +188,12 @@ case $SDK_VERSION in
   26|26.0*) TARGET=darwin25;   SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.13 ;;
   26.1*) TARGET=darwin25.1;   SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.13 ;;
   26.2*) TARGET=darwin25.2;   SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=10.13 ;;
+  26.4*) TARGET=darwin25.4;   SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=11.0 ;;
   *) echo "Unsupported SDK"; exit 1 ;;
 esac
+
+[[ -n "$_USER_SUPPORTED_ARCHS"  ]] && export SUPPORTED_ARCHS="$_USER_SUPPORTED_ARCHS"
+unset _USER_SUPPORTED_ARCHS
 
 if [ -n "$ENABLE_ARCHS" ]; then
   for arch in $ENABLE_ARCHS; do
@@ -82,9 +206,8 @@ if [ -n "$ENABLE_ARCHS" ]; then
   SUPPORTED_ARCHS="$(echo $ENABLE_ARCHS | xargs)"
 fi
 
-# Minimum targeted macOS version
-# Must be <= SDK_VERSION
-if [ -n "$OSX_VERSION_MIN_INT" -a -z "$OSX_VERSION_MIN" ]; then
+# Minimum targeted macOS version — must be <= SDK_VERSION
+if [ -n "$OSX_VERSION_MIN_INT" ] && [ -z "$OSX_VERSION_MIN" ]; then
   OSX_VERSION_MIN=$OSX_VERSION_MIN_INT
 fi
 
@@ -102,19 +225,17 @@ echo "Install Directory: $TARGET_DIR"
 echo "SDK Install Directory: $SDK_DIR"
 if [ -z "$UNATTENDED" ]; then
   echo ""
-  read -p "Press enter to start building"
+  read -r -p "Press enter to start building"
 fi
 echo ""
 
 export PATH=$TARGET_DIR/bin:$PATH
 
-mkdir -p $BUILD_DIR
-mkdir -p $TARGET_DIR
-mkdir -p $SDK_DIR
+mkdir -p "$BUILD_DIR" "$TARGET_DIR" "$SDK_DIR"
 
-source $BASE_DIR/tools/trap_exit.sh
+source "$BASE_DIR/tools/trap_exit.sh"
 
-pushd $BUILD_DIR &>/dev/null
+pushd "$BUILD_DIR" &>/dev/null || exit 1
 
 
 
@@ -132,34 +253,49 @@ build_xar
 
 # XAR END
 
+## Apple Dispatch/Blocks library ##
+
+get_sources https://github.com/gfunkmonk/apple-libdispatch.git main
+
+if [ $f_res -eq 1 ]; then
+  pushd "$CURRENT_BUILD_PROJECT_NAME" &>/dev/null || exit 1
+  mkdir -p build
+  pushd build &>/dev/null || exit 1
+  cmake .. -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=$TARGET_DIR
+  $MAKE install -j$JOBS
+  popd &>/dev/null || exit 1
+  popd &>/dev/null || exit 1
+  build_success
+fi
+
 ## Apple TAPI Library ##
 
 if [ $NEED_TAPI_SUPPORT -eq 1 ]; then
-  get_sources https://github.com/tpoechtrager/apple-libtapi.git 1300.6.5
+
+  get_sources https://github.com/gfunkmonk/apple-libtapi.git "${TAPI_VERSION}"
 
   if [ $f_res -eq 1 ]; then
-    pushd $CURRENT_BUILD_PROJECT_NAME &>/dev/null
+    pushd "$CURRENT_BUILD_PROJECT_NAME" &>/dev/null || exit 1
     INSTALLPREFIX=$TARGET_DIR ./build.sh
     ./install.sh
-    popd &>/dev/null
+    popd &>/dev/null || exit 1
     build_success
   fi
 fi
 
 ## cctools and ld64 ##
 
-CCTOOLS_VERSION=986
-LINKER_VERSION=711
-
 get_sources \
-  https://github.com/tpoechtrager/cctools-port.git \
+  https://github.com/gfunkmonk/cctools-port.git \
   $CCTOOLS_VERSION-ld64-$LINKER_VERSION
 
 if [ $f_res -eq 1 ]; then
-  pushd $CURRENT_BUILD_PROJECT_NAME/cctools &>/dev/null
+  pushd "$CURRENT_BUILD_PROJECT_NAME/cctools" &>/dev/null || exit 1
   echo ""
 
   CONFFLAGS="--prefix=$TARGET_DIR --target=$(first_supported_arch)-apple-$TARGET "
+  CONFFLAGS+="--with-libdispatch=$TARGET_DIR "
+  CONFFLAGS+="--with-libblocksruntime=$TARGET_DIR "
   if [ $NEED_TAPI_SUPPORT -eq 1 ]; then
     CONFFLAGS+="--with-libtapi=$TARGET_DIR "
   fi
@@ -169,65 +305,75 @@ if [ $f_res -eq 1 ]; then
   ./configure $CONFFLAGS
   $MAKE -j$JOBS
   $MAKE install -j$JOBS
-  popd &>/dev/null
+  popd &>/dev/null || exit 1
+  build_success
 fi
 
 ## Create Arch Symlinks ##
 
-pushd $TARGET_DIR/bin &>/dev/null
-TOOLS=($(find . -name "$(first_supported_arch)-apple-${TARGET}*"))
+pushd "$TARGET_DIR/bin" &>/dev/null || exit 1
+mapfile -t TOOLS < <(find . -name "$(first_supported_arch)-apple-${TARGET}*")
 function create_arch_symlinks()
 {
-  local arch=$1
-  local default_arch=$(first_supported_arch)
-  # Target arch must not be the source arch. 
-  if [ "$arch" = "$default_arch" ]; then
-    return
-  fi
-  for TOOL in ${TOOLS[@]}; do
+  local arch="$1"
+  local default_arch
+  default_arch=$(first_supported_arch)
+  # Target arch must not be the source arch.
+  [ "$arch" = "$default_arch" ] && return
+  for TOOL in "${TOOLS[@]}"; do
     verbose_cmd create_symlink $TOOL $(echo "$TOOL" | $SED "s/$(first_supported_arch)/$arch/g")
   done
 }
 
-if arch_supported x86_64; then
-  create_arch_symlinks "x86_64"
-fi
-
-if arch_supported x86_64h; then
-  create_arch_symlinks "x86_64h"
-fi
-
-if arch_supported i386; then
-  create_arch_symlinks "i386"
-fi
-
+arch_supported x86_64  && create_arch_symlinks "x86_64"
+arch_supported x86_64h && create_arch_symlinks "x86_64h"
+arch_supported i386    && create_arch_symlinks "i386"
 if arch_supported arm64; then
   create_arch_symlinks "aarch64"
   create_arch_symlinks "arm64"
 fi
+arch_supported arm64e  && create_arch_symlinks "arm64e"
 
-if arch_supported arm64e; then
-  create_arch_symlinks "arm64e"
-fi
-
-# For unpatched dsymutil. There is currently no way around it.
+# For unpatched dsymutil — no way around it currently
 create_symlink x86_64-apple-$TARGET-lipo lipo
-popd &>/dev/null
+popd &>/dev/null || exit 1
 
+## Wrap ranlib to suppress "has no symbols" warnings ##
+pushd "$TARGET_DIR/bin" &>/dev/null || exit 1
+for ranlib_bin in *-apple-*-ranlib; do
+  [ -f "$ranlib_bin" ] && [ ! -L "$ranlib_bin" ] && [ ! -f "${ranlib_bin}.real" ] || continue
+  mv "$ranlib_bin" "${ranlib_bin}.real"
+  cat > "$ranlib_bin" << 'RANLIB_WRAPPER'
+#!/bin/sh
+_dir=$(cd "$(dirname "$0")" && pwd)
+_lnk=$(readlink "$0")
+if [ -n "$_lnk" ]; then
+  case "$_lnk" in
+    /*) _script="$_lnk" ;;
+    *)  _script="$_dir/$_lnk" ;;
+  esac
+else
+  _script="$_dir/$(basename "$0")"
+fi
+exec "${_script}.real" -no_warning_for_no_symbols "$@"
+RANLIB_WRAPPER
+  chmod +x "$ranlib_bin"
+done
+popd &>/dev/null || exit 1
 
 ## MacPorts ##
 
-pushd $TARGET_DIR/bin &>/dev/null
+pushd "$TARGET_DIR/bin" &>/dev/null || exit 1
 rm -f osxcross-macports
 cp $BASE_DIR/tools/osxcross-macports osxcross-macports
 create_symlink osxcross-macports osxcross-mp
 create_symlink osxcross-macports omp
-popd &>/dev/null
+popd &>/dev/null || exit 1
 
 ## Extract SDK and move it to $SDK_DIR ##
 
 echo ""
-extract $SDK
+extract "$SDK"
 
 rm -rf $SDK_DIR/MacOSX$SDK_VERSION* 2>/dev/null
 if [ "$(ls -l SDKs/*$SDK_VERSION* 2>/dev/null | wc -l | tr -d ' ')" != "0" ]; then
@@ -243,8 +389,8 @@ fi
 
 ## Fix broken SDKs ##
 
-pushd $SDK_DIR/MacOSX$SDK_VERSION*.sdk &>/dev/null
-# Remove troublesome libc++ IWYU mapping file that may cause compiler errors
+pushd "$SDK_DIR/MacOSX$SDK_VERSION"*.sdk &>/dev/null || exit 1
+# Remove libc++ IWYU mapping file that can cause compiler errors
 # https://github.com/include-what-you-use/include-what-you-use/blob/master/docs/IWYUMappings.md
 rm -f usr/include/c++/v1/libcxx.imp
 set +e
@@ -257,9 +403,9 @@ for file in $files; do
   fi
 done
 set -e
-popd &>/dev/null
+popd &>/dev/null || exit 1
 
-popd &>/dev/null
+popd &>/dev/null || exit 1
 
 ## Wrapper ##
 
@@ -316,7 +462,7 @@ done
 unset MACOSX_DEPLOYMENT_TARGET
 
 if [ $(osxcross-cmp $SDK_VERSION ">=" 10.7) -eq 1 ]; then
-  pushd $SDK_DIR/MacOSX$SDK_VERSION.sdk &>/dev/null
+  pushd "$SDK_DIR/MacOSX$SDK_VERSION.sdk" &>/dev/null || exit 1
   if [ ! -f "usr/include/c++/v1/vector" ]; then
     echo ""
     echo -n "Given SDK does not contain libc++ headers "
@@ -350,7 +496,7 @@ if [ $(osxcross-cmp $SDK_VERSION ">=" 10.7) -eq 1 ]; then
       cat $PATCH_DIR/gcc_availability.h >> usr/include/Availability.h || true
     fi
   fi
-  popd &>/dev/null
+  popd &>/dev/null || exit 1
   for ARCH in $SUPPORTED_ARCHS; do
     test_compiler_cxx11 $ARCH-apple-$TARGET-clang++ $BASE_DIR/oclang/test_libcxx.cpp
   done

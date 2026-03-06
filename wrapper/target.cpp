@@ -794,6 +794,10 @@ bool Target::setup() {
           (stdlib == StdLib::libstdcxx && usegcclibs)) {
         fargs.push_back("-nostdinc++");
         fargs.push_back("-Qunused-arguments");
+
+        if ((SDKOSNum >= OSVersion(11, 1)) && (stdlib == StdLib::libcxx)) {
+          fargs.push_back("-lc++");
+        }
       }
 
       if (stdlib == StdLib::libstdcxx && usegcclibs && targetarchs.size() < 2 &&
@@ -892,38 +896,36 @@ bool Target::setup() {
     case Arch::i586:
     case Arch::i686:
       is32bit = true;
-      // falls through
+      break;
     case Arch::arm64:
-      isArm = true;
-      // falls through
     case Arch::arm64e:
       isArm = true;
-      // falls through
+      break;
     case Arch::x86_64:
     case Arch::x86_64h:
-      if (isGCC()) {
-        if (arch != Arch::x86_64 && arch != Arch::i386) {
-          err << "gcc does not support architecture '" << getArchName(arch)
-              << "'" << err.endl();
-          return false;
-        }
-
-        if (targetarchs.size() > 1)
-          break;
-
-        if (!isArm)
-          fargs.push_back(is32bit ? "-m32" : "-m64");
-      } else if (isClang()) {
-        if (usegcclibs && targetarchs.size() > 1)
-          break;
-        fargs.push_back("-arch");
-        fargs.push_back(getArchName(arch));
-      }
       break;
     default:
       err << "unsupported architecture: '" << getArchName(arch) << "'"
           << err.endl();
       return false;
+    }
+    if (isGCC()) {
+      if (arch != Arch::x86_64 && arch != Arch::i386) {
+        err << "gcc does not support architecture '" << getArchName(arch)
+            << "'" << err.endl();
+        return false;
+      }
+
+      if (targetarchs.size() > 1)
+        continue;
+
+      if (!isArm)
+        fargs.push_back(is32bit ? "-m32" : "-m64");
+    } else if (isClang()) {
+      if (usegcclibs && targetarchs.size() > 1)
+        continue;
+      fargs.push_back("-arch");
+      fargs.push_back(getArchName(arch));
     }
   }
 
@@ -955,6 +957,34 @@ bool Target::setup() {
       if (wliblto == -1)
         fargs.push_back("-Wno-liblto");
     }
+
+#ifndef __APPLE__
+    if (haveArch(Arch::i386)) {
+      //
+      // Silence:
+      // ld: warning: ignoring file libclang_rt.osx.a, file is universal
+      //              (x86_64,x86_64h,arm64,arm64e) but does not contain
+      //              the i386 architecture
+      //
+      // Recent clang versions have dropped i386 from libclang_rt.osx.a.
+      // The linker correctly ignores the file; this is a cross-compilation
+      // artifact, not a user code issue.  ld64 provides no per-warning
+      // suppression flag, so -w (suppress all linker warnings) is used.
+      //
+      // Only pass this linker flag when actually linking; in compile-only
+      // mode (-c/-S/-E) clang would warn about the unused linker argument.
+      //
+      bool linking = true;
+      for (const auto &arg : args) {
+        if (arg == "-c" || arg == "-S" || arg == "-E") {
+          linking = false;
+          break;
+        }
+      }
+      if (linking)
+        fargs.push_back("-Wl,-w");
+    }
+#endif
 
     if (getenv("OSXCROSS_ENABLE_WERROR_IMPLICIT_FUNCTION_DECLARATION"))
       fargs.push_back("-Werror=implicit-function-declaration");

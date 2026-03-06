@@ -6,7 +6,7 @@
 # Tested with XCode Command Line Tools 12.x
 #
 
-pushd "${0%/*}/.." &>/dev/null
+pushd "${0%/*}/.." &>/dev/null || exit 1
 source tools/tools.sh
 
 require cpio
@@ -24,7 +24,7 @@ fi
 XCODE_TOOLS_DMG=$(make_absolute_path "$1" $(get_exec_dir))
 
 mkdir -p $BUILD_DIR
-pushd $BUILD_DIR &>/dev/null
+pushd "$BUILD_DIR" &>/dev/null || exit 1
 
 require git
 require $MAKE
@@ -40,7 +40,7 @@ build_p7zip
 
 create_tmp_dir
 
-pushd $TMP_DIR &>/dev/null
+pushd "$TMP_DIR" &>/dev/null || exit 1
 
 echo ""
 echo "Unpacking $XCODE_TOOLS_DMG ..."
@@ -64,8 +64,8 @@ for PKG in $TMP_DIR/pkg_data/*.pkg; do
 done
 
 
-popd &>/dev/null # TMP_DIR
-popd &>/dev/null # BUILD_DIR
+popd &>/dev/null || exit 1 # TMP_DIR
+popd &>/dev/null || exit 1 # BUILD_DIR
 
 echo ""
 

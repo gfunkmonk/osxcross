@@ -1,0 +1,160 @@
+---
+name: SDK
+
+on:
+  workflow_dispatch:
+    inputs:
+      sdk_14:
+        description: 'Build macOS 14 SDKs'
+        required: false
+        type: boolean
+        default: true
+      sdk_15:
+        description: 'Build macOS 15 SDKs'
+        required: false
+        type: boolean
+        default: true
+      sdk_26:
+        description: 'Build macOS 26 SDKs'
+        required: false
+        type: boolean
+        default: true
+  workflow_call:
+    inputs:
+      sdk_14:
+        description: 'Build macOS 14 SDKs'
+        required: false
+        type: boolean
+        default: true
+      sdk_15:
+        description: 'Build macOS 15 SDKs'
+        required: false
+        type: boolean
+        default: true
+      sdk_26:
+        description: 'Build macOS 26 SDKs'
+        required: false
+        type: boolean
+        default: true
+    outputs:
+      SDK_VERSIONS:
+        description: "List of SDK versions built"
+        value: ${{ jobs.collect_sdks.outputs.SDK_VERSIONS }}
+jobs:
+  determine_sdks:
+    name: Determine SDK Versions
+    runs-on: ubuntu-latest
+    outputs:
+      sdk_versions: ${{ steps.set_matrix.outputs.sdk_versions }}
+    steps:
+      - name: Set SDK matrix
+        id: set_matrix
+        run: |
+          SDK_VERSIONS="["
+          SEPARATOR=""
+          if [ "${{ inputs.sdk_14 }}" == "true" ]; then
+            SDK_VERSIONS="${SDK_VERSIONS}${SEPARATOR}14"
+            SEPARATOR=","
+          fi
+          if [ "${{ inputs.sdk_15 }}" == "true" ]; then
+            SDK_VERSIONS="${SDK_VERSIONS}${SEPARATOR}15"
+            SEPARATOR=","
+          fi
+          if [ "${{ inputs.sdk_26 }}" == "true" ]; then
+            SDK_VERSIONS="${SDK_VERSIONS}${SEPARATOR}26"
+            SEPARATOR=","
+          fi
+          SDK_VERSIONS="${SDK_VERSIONS}]"
+          echo "sdk_versions=${SDK_VERSIONS}" >> "$GITHUB_OUTPUT"
+          echo "Selected SDK versions: ${SDK_VERSIONS}"
+  package_sdk:
+    name: Package SDK ${{ matrix.macos_version }}
+    needs: determine_sdks
+    if: needs.determine_sdks.outputs.sdk_versions != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        macos_version: ${{ fromJSON(needs.determine_sdks.outputs.sdk_versions) }}
+    runs-on: macos-${{ matrix.macos_version }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Cache SDK packages
+        id: cache-sdk-packages
+        uses: actions/cache/restore@v4
+        with:
+          path: sdk-${{ matrix.macos_version }}
+          key: sdk-packages-macos-${{ matrix.macos_version }}-${{ hashFiles('tools/gen_sdk_package.sh') }}-v1
+      - name: install homebrew packages
+        run: |
+          brew install pixz
+      - name: Package SDKs
+        if: steps.cache-sdk-packages.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          xcode-select -p
+          xcodebuild -version
+          xcodebuild -showsdks
+          mkdir -p "sdk-${{ matrix.macos_version }}"
+          while IFS= read -r xcode; do
+            [ -z "$xcode" ] && continue
+            echo "Processing Xcode: $xcode"
+            XCODEDIR="/Applications/$xcode" \
+            SDK_COMPRESSOR=xz \
+            SKIP_EXISTING_SDKS=1 \
+              tools/gen_sdk_package.sh
+          done < <(cd /Applications && ls -d Xcode_[0-9]*.app 2>/dev/null | sort -rV)
+          # Collect all produced SDK tarballs
+          mv -f ./*.sdk.tar.xz "sdk-${{ matrix.macos_version }}/" 2>/dev/null || true
+          echo "Packaged SDKs:"
+          ls -lh "sdk-${{ matrix.macos_version }}/"
+      - name: Save SDK cache
+        uses: actions/cache/save@v4
+        if: steps.cache-sdk-packages.outputs.cache-hit != 'true'
+        with:
+          path: sdk-${{ matrix.macos_version }}
+          key: ${{ steps.cache-sdk-packages.outputs.cache-primary-key }}
+      - name: Upload SDK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdk-${{ matrix.macos_version }}
+          path: sdk-${{ matrix.macos_version }}
+          compression-level: 0
+  collect_sdks:
+    name: Collect SDKs
+    runs-on: ubuntu-latest
+    needs: package_sdk
+    outputs:
+      SDK_VERSIONS: ${{ steps.get_all_sdk_versions.outputs.result }}
+    steps:
+      - name: Download all SDK artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: 'sdk-*'
+          merge-multiple: true
+          path: sdks
+      - name: Verify downloaded SDKs
+        shell: bash
+        run: |
+          echo "Downloaded SDK files:"
+          ls -lh sdks/*.sdk.tar.xz 2>/dev/null || { echo "No SDK files found"; exit 1; }
+      - name: Get all SDK versions
+        id: get_all_sdk_versions
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const files = fs.readdirSync('sdks').filter(f =>
+              f.startsWith('MacOSX') && f.endsWith('.sdk.tar.xz')
+            );
+            // Extract version string: MacOSX14.5.sdk.tar.xz → "14.5"
+            const versions = files
+              .map(f => f.replace(/^MacOSX/, '').replace(/\.sdk\.tar\.xz$/, ''))
+              .filter(v => v.length > 0);
+            console.log('SDK versions:', versions);
+            return versions;
+      - name: Upload all SDKs as single combined artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: all-sdks
+          path: sdks/*.sdk.tar.xz
+          compression-level: 0

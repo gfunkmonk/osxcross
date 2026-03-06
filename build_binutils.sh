@@ -7,7 +7,7 @@
 # gcc. Please refer to the README.md for details.
 #
 
-pushd "${0%/*}" &>/dev/null
+pushd "${0%/*}" &>/dev/null || exit 1
 
 DESC=binutils
 USESYSTEMCOMPILER=1
@@ -17,12 +17,12 @@ eval $(tools/osxcross_conf.sh)
 
 # binutils version to build
 if [ -z "$BINUTILS_VERSION" ]; then
-  BINUTILS_VERSION=2.32
+  BINUTILS_VERSION=2.46.0
 fi
 
 # gdb version to build
 if [ -z "$GDB_VERSION" ]; then
-  GDB_VERSION=16.2
+  GDB_VERSION=17.1
 fi
 
 # architecture to target
@@ -33,7 +33,7 @@ fi
 # mirror
 MIRROR="https://ftp.gnu.org/gnu"
 
-pushd $BUILD_DIR &>/dev/null
+pushd "$BUILD_DIR" &>/dev/null || exit 1
 
 function remove_locks()
 {
@@ -43,18 +43,18 @@ function remove_locks()
 function build_and_install()
 {
   if [ ! -f "have_$1_$2_${TARGET}_${TARGET_ARCH}" ]; then
-    pushd $TARBALL_DIR &>/dev/null
-    download "$MIRROR/$1/$1-$2.tar.gz"
-    popd &>/dev/null
+    pushd $TARBALL_DIR &>/dev/null || return 1
+    download "$MIRROR/$1/$1-$2.tar.xz"
+    popd &>/dev/null || return 1
 
     echo "cleaning up ..."
     rm -rf $1* 2>/dev/null
 
-    extract "$TARBALL_DIR/$1-$2.tar.gz" 1
+    extract "$TARBALL_DIR/$1-$2.tar.xz" 1
 
-    pushd $1*$2* &>/dev/null
+    pushd $1*$2* &>/dev/null || return 1
     mkdir -p build
-    pushd build &>/dev/null
+    pushd build &>/dev/null || return 1
 
     ../configure \
       --target=$TARGET_ARCH-apple-$TARGET \
@@ -66,8 +66,8 @@ function build_and_install()
     $MAKE -j$JOBS
     $MAKE install
 
-    popd &>/dev/null
-    popd &>/dev/null
+    popd &>/dev/null || return 1
+    popd &>/dev/null || return 1
     touch "have_$1_$2_${TARGET}_${TARGET_ARCH}"
   fi
 }

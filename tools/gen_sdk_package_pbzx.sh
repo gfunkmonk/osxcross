@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-pushd "${0%/*}/.." &>/dev/null
+pushd "${0%/*}/.." &>/dev/null || exit 1
 source tools/tools.sh
 
 require cpio
@@ -18,14 +18,14 @@ fi
 XCODE=$(make_absolute_path $1 $(get_exec_dir))
 
 mkdir -p $BUILD_DIR
-pushd $BUILD_DIR &>/dev/null
+pushd "$BUILD_DIR" &>/dev/null || exit 1
 
 build_xar
 build_pbxz
 
 create_tmp_dir
 
-pushd $TMP_DIR &>/dev/null
+pushd "$TMP_DIR" &>/dev/null || exit 1
 
 echo "Extracting $XCODE (this may take several minutes) ..."
 
@@ -35,8 +35,8 @@ LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$TARGET_DIR/lib \
 LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$TARGET_DIR/lib \
   verbose_cmd "$TARGET_DIR/SDK/tools/bin/pbzx -n Content | cpio -i"
 
-popd &>/dev/null # TMP_DIR
-popd &>/dev/null # BUILD_DIR
+popd &>/dev/null || exit 1 # TMP_DIR
+popd &>/dev/null || exit 1 # BUILD_DIR
 
 echo ""
 

@@ -6,7 +6,7 @@
 # If that also fails, just echo 1...
 #
 
-pushd "${0%/*}" &>/dev/null
+pushd "${0%/*}" &>/dev/null || exit
 
 nproc 2>/dev/null && exit 0 || ncpus 2>/dev/null && exit 0 || {
   if [ ! -f cpucount ]; then
@@ -16,4 +16,4 @@ nproc 2>/dev/null && exit 0 || ncpus 2>/dev/null && exit 0 || {
 
 ./cpucount
 
-popd &>/dev/null
+popd &>/dev/null || exit

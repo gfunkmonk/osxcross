@@ -30,19 +30,19 @@ if [ ! -e "$XCODEDMG" ]; then
   exit 1
 fi
 
-pushd "${0%/*}/.." &>/dev/null
+pushd "${0%/*}/.." &>/dev/null || exit 1
 source tools/tools.sh
-popd &>/dev/null
+popd &>/dev/null || exit 1
 
 require dmg2img
 verbose_cmd "modprobe hfsplus"
 
-TMP=$(mktemp -d /tmp/XXXXXXXXX)
+TMP=$(mktemp -d)
 echo "tmp dir: $TMP"
 
 verbose_cmd "chmod 777 $TMP"
 
-pushd $TMP &>/dev/null
+pushd "$TMP" &>/dev/null || exit 1
 
 PARTITION=$(dmg2img -l $XCODEDMG | grep 'disk image (Apple_HFS ' | \
             awk '{printf "%d", $2}')
@@ -70,4 +70,4 @@ echo "once you are done with gen_sdk_package.sh, run:"
 echo "umount -l $TMP/mnt && rm -rf $TMP"
 echo ""
 
-popd &>/dev/null
+popd &>/dev/null || exit 1

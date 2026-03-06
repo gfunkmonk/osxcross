@@ -255,20 +255,18 @@ build_xar
 
 ## Apple Dispatch/Blocks library ##
 
-#if [ $NEED_TAPI_SUPPORT -eq 1 ]; then
-  get_sources https://github.com/gfunkmonk/apple-libdispatch.git main
+get_sources https://github.com/gfunkmonk/apple-libdispatch.git main
 
-  if [ $f_res -eq 1 ]; then
-    pushd $CURRENT_BUILD_PROJECT_NAME &>/dev/null
-    mkdir -p build
-    pushd build &>/dev/null
-    cmake .. -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=$TARGET_DIR
-    $MAKE install -j$JOBS
-    popd &>/dev/null
-    popd &>/dev/null
-    build_success
-  fi
-#fi
+if [ $f_res -eq 1 ]; then
+  pushd $CURRENT_BUILD_PROJECT_NAME &>/dev/null
+  mkdir -p build
+  pushd build &>/dev/null
+  cmake .. -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=$TARGET_DIR
+  $MAKE install -j$JOBS
+  popd &>/dev/null
+  popd &>/dev/null
+  build_success
+fi
 
 ## Apple TAPI Library ##
 
@@ -286,11 +284,6 @@ if [ $NEED_TAPI_SUPPORT -eq 1 ]; then
 fi
 
 ## cctools and ld64 ##
-
-#if [ $NEED_TAPI_SUPPORT -eq 0 ]; then
-#  export CCTOOLS_VERSION=986
-#  export LINKER_VERSION=711
-#fi
 
 get_sources \
   https://github.com/gfunkmonk/cctools-port.git \

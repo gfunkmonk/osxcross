@@ -341,7 +341,7 @@ popd &>/dev/null || exit 1
 ## Wrap ranlib to suppress "has no symbols" warnings ##
 pushd "$TARGET_DIR/bin" &>/dev/null || exit 1
 for ranlib_bin in *-apple-*-ranlib; do
-  [ -f "$ranlib_bin" ] && [ ! -L "$ranlib_bin" ] || continue
+  [ -f "$ranlib_bin" ] && [ ! -L "$ranlib_bin" ] && [ ! -f "${ranlib_bin}.real" ] || continue
   mv "$ranlib_bin" "${ranlib_bin}.real"
   cat > "$ranlib_bin" << 'RANLIB_WRAPPER'
 #!/bin/sh

@@ -199,7 +199,7 @@ download "$CLANG_LLVM_PKG"
 popd &>/dev/null || exit 1 #$TARBALL_DIR
 
 # extract ZIP
-pushd "$BUILD_DIR" &>/dev/null
+pushd "$BUILD_DIR" &>/dev/null || exit 1
 
 rm -rf "clang-$CLANG_VERSION"
 mkdir "clang-$CLANG_VERSION"

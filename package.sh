@@ -21,10 +21,10 @@ set -e
 
 OSXCROSSVER=$(grep "^VERSION=" build.sh | head -n1 | cut -d= -f2)
 
-pushd "$TMPDIR"
+pushd "$TMPDIR" || exit 1
 
 mkdir osxcross
-pushd osxcross
+pushd osxcross || exit 1
 
 if [ $BINARYPACKAGE != "1" ]; then
   cp -r "$BASEDIR/tarballs" .
@@ -77,10 +77,10 @@ find . \( -name "*.save" -o -name "*~" -o -name "*.kate-swp" \) -exec rm {} \;
 
 rm -rf osxcross*.tar.*
 
-popd
+popd || exit 1
 
 tar -cf - * | xz -$COMPRESSLEVEL -c - > "$BASEDIR/osxcross-v${OSXCROSSVER}_${REVHASH}${SUFFIX}.tar.xz"
 
-popd
+popd || exit 1
 
 rm -rf "$TMPDIR"

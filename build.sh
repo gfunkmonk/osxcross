@@ -258,13 +258,13 @@ build_xar
 get_sources https://github.com/gfunkmonk/apple-libdispatch.git main
 
 if [ $f_res -eq 1 ]; then
-  pushd $CURRENT_BUILD_PROJECT_NAME &>/dev/null
+  pushd "$CURRENT_BUILD_PROJECT_NAME" &>/dev/null || exit 1
   mkdir -p build
-  pushd build &>/dev/null
+  pushd build &>/dev/null || exit 1
   cmake .. -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=$TARGET_DIR
   $MAKE install -j$JOBS
-  popd &>/dev/null
-  popd &>/dev/null
+  popd &>/dev/null || exit 1
+  popd &>/dev/null || exit 1
   build_success
 fi
 
@@ -275,10 +275,10 @@ if [ $NEED_TAPI_SUPPORT -eq 1 ]; then
   get_sources https://github.com/gfunkmonk/apple-libtapi.git "${TAPI_VERSION}"
 
   if [ $f_res -eq 1 ]; then
-    pushd $CURRENT_BUILD_PROJECT_NAME &>/dev/null
+    pushd "$CURRENT_BUILD_PROJECT_NAME" &>/dev/null || exit 1
     INSTALLPREFIX=$TARGET_DIR ./build.sh
     ./install.sh
-    popd &>/dev/null
+    popd &>/dev/null || exit 1
     build_success
   fi
 fi
@@ -290,7 +290,7 @@ get_sources \
   $CCTOOLS_VERSION-ld64-$LINKER_VERSION
 
 if [ $f_res -eq 1 ]; then
-  pushd $CURRENT_BUILD_PROJECT_NAME/cctools &>/dev/null
+  pushd "$CURRENT_BUILD_PROJECT_NAME/cctools" &>/dev/null || exit 1
   echo ""
 
   CONFFLAGS="--prefix=$TARGET_DIR --target=$(first_supported_arch)-apple-$TARGET "
@@ -305,13 +305,13 @@ if [ $f_res -eq 1 ]; then
   ./configure $CONFFLAGS
   $MAKE -j$JOBS
   $MAKE install -j$JOBS
-  popd &>/dev/null
+  popd &>/dev/null || exit 1
   build_success
 fi
 
 ## Create Arch Symlinks ##
 
-pushd $TARGET_DIR/bin &>/dev/null
+pushd "$TARGET_DIR/bin" &>/dev/null || exit 1
 mapfile -t TOOLS < <(find . -name "$(first_supported_arch)-apple-${TARGET}*")
 function create_arch_symlinks()
 {
@@ -336,17 +336,17 @@ arch_supported arm64e  && create_arch_symlinks "arm64e"
 
 # For unpatched dsymutil — no way around it currently
 create_symlink x86_64-apple-$TARGET-lipo lipo
-popd &>/dev/null
+popd &>/dev/null || exit 1
 
 
 ## MacPorts ##
 
-pushd $TARGET_DIR/bin &>/dev/null
+pushd "$TARGET_DIR/bin" &>/dev/null || exit 1
 rm -f osxcross-macports
 cp $BASE_DIR/tools/osxcross-macports osxcross-macports
 create_symlink osxcross-macports osxcross-mp
 create_symlink osxcross-macports omp
-popd &>/dev/null
+popd &>/dev/null || exit 1
 
 ## Extract SDK and move it to $SDK_DIR ##
 
@@ -367,7 +367,7 @@ fi
 
 ## Fix broken SDKs ##
 
-pushd $SDK_DIR/MacOSX$SDK_VERSION*.sdk &>/dev/null
+pushd "$SDK_DIR/MacOSX$SDK_VERSION"*.sdk &>/dev/null || exit 1
 # Remove libc++ IWYU mapping file that can cause compiler errors
 # https://github.com/include-what-you-use/include-what-you-use/blob/master/docs/IWYUMappings.md
 rm -f usr/include/c++/v1/libcxx.imp
@@ -381,9 +381,9 @@ for file in $files; do
   fi
 done
 set -e
-popd &>/dev/null
+popd &>/dev/null || exit 1
 
-popd &>/dev/null
+popd &>/dev/null || exit 1
 
 ## Wrapper ##
 
@@ -440,7 +440,7 @@ done
 unset MACOSX_DEPLOYMENT_TARGET
 
 if [ $(osxcross-cmp $SDK_VERSION ">=" 10.7) -eq 1 ]; then
-  pushd $SDK_DIR/MacOSX$SDK_VERSION.sdk &>/dev/null
+  pushd "$SDK_DIR/MacOSX$SDK_VERSION.sdk" &>/dev/null || exit 1
   if [ ! -f "usr/include/c++/v1/vector" ]; then
     echo ""
     echo -n "Given SDK does not contain libc++ headers "
@@ -474,7 +474,7 @@ if [ $(osxcross-cmp $SDK_VERSION ">=" 10.7) -eq 1 ]; then
       cat $PATCH_DIR/gcc_availability.h >> usr/include/Availability.h || true
     fi
   fi
-  popd &>/dev/null
+  popd &>/dev/null || exit 1
   for ARCH in $SUPPORTED_ARCHS; do
     test_compiler_cxx11 $ARCH-apple-$TARGET-clang++ $BASE_DIR/oclang/test_libcxx.cpp
   done

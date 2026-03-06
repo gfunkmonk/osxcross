@@ -147,19 +147,19 @@ function guess_sdk_version()
 {
   local tmp1 tmp2 tmp3 file sdk sdkcount
   guess_sdk_version_result=
-  sdkcount=$(find -L tarballs/ -type f | grep MacOSX | wc -l)
+  sdkcount=$(find -L tarballs/ -type f -name "MacOSX*" | wc -l)
   if [ $sdkcount -eq 0 ]; then
     echo no SDK found in 'tarballs/'. please see README.md
     exit 1
   elif [ $sdkcount -gt 1 ]; then
-    sdks=$(find -L tarballs/ -type f | grep MacOSX)
+    sdks=$(find -L tarballs/ -type f -name "MacOSX*")
     for sdk in $sdks; do echo $sdk; done
     echo 'more than one MacOSX SDK tarball found. please set'
     echo 'SDK_VERSION environment variable for the one you want'
     echo '(for example: SDK_VERSION=10.x [OSX_VERSION_MIN=10.x] [TARGET_DIR=...] ./build.sh)'
     exit 1
   else
-    sdk=$(find -L tarballs/ -type f | grep MacOSX)
+    sdk=$(find -L tarballs/ -type f -name "MacOSX*")
     tmp2=$(echo ${sdk/bz2/} | $SED s/[^0-9.]//g)
     tmp3=$(echo $tmp2 | $SED s/\\\.*$//g)
     guess_sdk_version_result=$tmp3
@@ -177,9 +177,9 @@ function guess_sdk_version()
 function set_and_verify_sdk_path()
 {
   if [[ $SDK_VERSION == *.* ]]; then
-    SDK=$(ls $TARBALL_DIR/MacOSX$SDK_VERSION* || echo "")
+    SDK=$(ls "$TARBALL_DIR/MacOSX$SDK_VERSION"* 2>/dev/null || echo "")
   else
-    SDK=$(ls $TARBALL_DIR/MacOSX$SDK_VERSION.* | grep -v "\.[0-9]\+" || echo "")
+    SDK=$(ls "$TARBALL_DIR/MacOSX$SDK_VERSION".sdk.* 2>/dev/null | head -n1 || echo "")
   fi
 
   if [ -z "$SDK" ] ; then
@@ -257,7 +257,7 @@ function cleanup_tmp_dir()
 function create_tmp_dir()
 {
   mkdir -p "$BUILD_DIR"
-  pushd "$BUILD_DIR" &>/dev/null
+  pushd "$BUILD_DIR" &>/dev/null || return 1
   local tmp
 
   for i in {1..100}; do
@@ -274,7 +274,7 @@ function create_tmp_dir()
   TMP_DIR="$BUILD_DIR/$tmp"
   trap cleanup_tmp_dir EXIT
 
-  popd &>/dev/null
+  popd &>/dev/null || return 1
 }
 
 # f_res=1 = something has changed upstream
@@ -288,12 +288,12 @@ function git_clone_repository()
 
   if [ -n "$TP_OSXCROSS_DEV" ] && [ -d "$TP_OSXCROSS_DEV/$project_name" ] ; then
     # copy files from local working directory
-    rm -rf $project_name
-    cp -r $TP_OSXCROSS_DEV/$project_name .
+    rm -rf "$project_name"
+    cp -r "$TP_OSXCROSS_DEV/$project_name" .
     if [ -e ${project_name}/.git ]; then
-      pushd $project_name &>/dev/null
+      pushd "$project_name" &>/dev/null || return 1
       git clean -fdx &>/dev/null
-      popd &>/dev/null
+      popd &>/dev/null || return 1
     fi
     f_res=1
     return
@@ -311,7 +311,7 @@ function git_clone_repository()
     git clone "$url" "$project_name" $git_extra_opts
   fi
 
-  pushd "$project_name" &>/dev/null
+  pushd "$project_name" &>/dev/null || return 1
 
   git reset --hard &>/dev/null
   git clean -fdx &>/dev/null
@@ -338,7 +338,7 @@ function git_clone_repository()
     f_res=0
   fi
 
-  popd &>/dev/null
+  popd &>/dev/null || return 1
 }
 
 function get_project_name_from_url()
@@ -519,21 +519,21 @@ function test_compiler_cxx2b()
 
 function build_xar()
 {
-  pushd "$BUILD_DIR" &>/dev/null
+  pushd "$BUILD_DIR" &>/dev/null || return 1
 
   get_sources https://github.com/gfunkmonk/xar.git master
 
   if [ $f_res -eq 1 ]; then
-    pushd "$CURRENT_BUILD_PROJECT_NAME/xar" &>/dev/null
+    pushd "$CURRENT_BUILD_PROJECT_NAME/xar" &>/dev/null || return 1
     CFLAGS+=" -w" \
       ./configure --prefix=$TARGET_DIR
     $MAKE -j$JOBS
     $MAKE install -j$JOBS
-    popd &>/dev/null
+    popd &>/dev/null || return 1
     build_success
   fi
 
-  popd &>/dev/null
+  popd &>/dev/null || return 1
 }
 
 function build_p7zip()
@@ -541,7 +541,7 @@ function build_p7zip()
   get_sources https://github.com/tpoechtrager/p7zip.git master
 
   if [ $f_res -eq 1 ]; then
-    pushd $CURRENT_BUILD_PROJECT_NAME &>/dev/null
+    pushd "$CURRENT_BUILD_PROJECT_NAME" &>/dev/null || return 1
 
     if [ -n "$CC" ] && [ -n "$CXX" ]; then
       [[ $CC == *clang* ]] && CC="$CC -Qunused-arguments"
@@ -554,7 +554,7 @@ function build_p7zip()
     $MAKE install DEST_HOME=$TARGET_DIR_SDK_TOOLS
     find $TARGET_DIR_SDK_TOOLS/share -type f -exec chmod 0664 {} \;
     find $TARGET_DIR_SDK_TOOLS/share -type d -exec chmod 0775 {} \;
-    popd &>/dev/null
+    popd &>/dev/null || return 1
     build_success
   fi
 }
@@ -564,14 +564,14 @@ function build_pbxz()
   get_sources https://github.com/tpoechtrager/pbzx.git master
 
   if [ $f_res -eq 1 ]; then
-    pushd $CURRENT_BUILD_PROJECT_NAME &>/dev/null
+    pushd "$CURRENT_BUILD_PROJECT_NAME" &>/dev/null || return 1
     mkdir -p $TARGET_DIR_SDK_TOOLS/bin
     verbose_cmd $CC -O2 -Wall \
                 -I $TARGET_DIR/include -L $TARGET_DIR/lib pbzx.c \
                 -o $TARGET_DIR_SDK_TOOLS/bin/pbzx -llzma -lxar \
                 -Wl,-rpath,$TARGET_DIR/lib
     build_success
-    popd &>/dev/null
+    popd &>/dev/null || return 1
   fi
 }
 

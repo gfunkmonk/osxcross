@@ -127,7 +127,7 @@ fi
 
 verbose_cmd mv wrapper "${TARGET_DIR}/bin/${TARGETTRIPLE}-wrapper"
 
-pushd "${TARGET_DIR}/bin" &>/dev/null
+pushd "${TARGET_DIR}/bin" &>/dev/null || exit 1
 
 if [ $TARGETCOMPILER = "clang" ]; then
   create_wrapper_link clang 2
@@ -170,5 +170,5 @@ if [ "$PLATFORM" != "Darwin" ]; then
   create_wrapper_link xcodebuild 1
 fi
 
-popd &>/dev/null
-popd &>/dev/null
+popd &>/dev/null || exit 1
+popd &>/dev/null || exit 1

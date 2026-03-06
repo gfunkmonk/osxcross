@@ -129,14 +129,14 @@ if [ -z "${XCODE_TOOLS:-}" ]; then
 
   set -e
 
-  pushd "$XCODEDIR" &>/dev/null
+  pushd "$XCODEDIR" &>/dev/null || exit 1
 
   if [ -d "Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs" ]; then
-    pushd "Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs" &>/dev/null
+    pushd "Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs" &>/dev/null || exit 1
   elif [ -d "../Packages" ]; then
-      pushd "../Packages" &>/dev/null
+      pushd "../Packages" &>/dev/null || exit 1
     elif [ -d "Packages" ]; then
-      pushd "Packages" &>/dev/null
+      pushd "Packages" &>/dev/null || exit 1
     else
     echo "Xcode (or this script) is out of date" >&2
     echo "trying some magic to find the SDKs anyway ..." >&2
@@ -147,7 +147,7 @@ if [ -z "${XCODE_TOOLS:-}" ]; then
       echo "cannot find SDKs!" >&2
           exit 1
         fi
-        pushd "$SDKDIR" &>/dev/null
+        pushd "$SDKDIR" &>/dev/null || exit 1
       fi
 
 else
@@ -175,10 +175,10 @@ else
 
   echo -e "found Xcode Command Line Tools: $XCODE_TOOLS_DIR"
 
-  pushd "$XCODE_TOOLS_DIR" &>/dev/null
+  pushd "$XCODE_TOOLS_DIR" &>/dev/null || exit 1
 
   if [ -d "SDKs" ]; then
-    pushd "SDKs" &>/dev/null
+    pushd "SDKs" &>/dev/null || exit 1
   else
     echo "$XCODE_TOOLS_DIR/SDKs does not exist"  1>&2
     exit 1
@@ -229,9 +229,7 @@ for SDK in "${SDKS[@]}"; do
   TMP=$(mktemp -d)
   cp -r "$(rreadlink "$SDK")" "$TMP/$SDK" &>/dev/null || true
 
-  pushd "$XCODEDIR" &>/dev/null
-
-  mkdir -p "$TMP/$SDK/usr/include/c++"
+  pushd "$XCODEDIR" &>/dev/null || exit 1
 
   # Copy libc++ headers if missing from the SDK
   if [ ! -f "$TMP/$SDK/usr/include/c++/v1/version" ]; then
@@ -249,17 +247,17 @@ for SDK in "${SDKS[@]}"; do
     cp -rf "$MANDIR/"* "$TMP/$SDK/usr/share/man"
   fi
 
-  popd &>/dev/null
+  popd &>/dev/null || exit 1
 
-  pushd "$TMP" &>/dev/null
+  pushd "$TMP" &>/dev/null || exit 1
   compress "*" "$WDIR/$SDK$SDK_EXT"
-  popd &>/dev/null
+  popd &>/dev/null || exit 1
 
   rm -rf "$TMP"   # FIX: quoted
 done
 
-popd &>/dev/null
-popd &>/dev/null
+popd &>/dev/null || exit 1
+popd &>/dev/null || exit 1
 
 echo ""
 ls -lh MacOSX*.sdk.* 2>/dev/null || echo "No MacOSX SDK files found"

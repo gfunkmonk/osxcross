@@ -110,7 +110,7 @@ jobs:
           fi
 
           SDK_VERSIONS="${SDK_VERSIONS}]"
-          echo "sdk_versions=${SDK_VERSIONS}" >> $GITHUB_OUTPUT
+          echo "sdk_versions=${SDK_VERSIONS}" >> "$GITHUB_OUTPUT"
           echo "Selected SDK versions: ${SDK_VERSIONS}"
   build-linux-x86-64:
     name: Build ${{ matrix.version }}
@@ -157,7 +157,6 @@ jobs:
           update_packager_index: true
           install_ccache: true
           prepend_symlinks_to_path: true
-          cache_key: ccache-osxcross-${{ matrix.version }}
       - name: build osxcross
         run: |
           UNATTENDED=1 TARGET_DIR=${{ github.workspace }}/osxcross JOBS=$(nproc) ./build.sh

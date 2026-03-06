@@ -971,7 +971,18 @@ bool Target::setup() {
       // artifact, not a user code issue.  ld64 provides no per-warning
       // suppression flag, so -w (suppress all linker warnings) is used.
       //
-      fargs.push_back("-Wl,-w");
+      // Only pass this linker flag when actually linking; in compile-only
+      // mode (-c/-S/-E) clang would warn about the unused linker argument.
+      //
+      bool linking = true;
+      for (const auto &arg : args) {
+        if (arg == "-c" || arg == "-S" || arg == "-E") {
+          linking = false;
+          break;
+        }
+      }
+      if (linking)
+        fargs.push_back("-Wl,-w");
     }
 #endif
 

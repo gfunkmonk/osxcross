@@ -338,6 +338,34 @@ arch_supported arm64e  && create_arch_symlinks "arm64e"
 create_symlink x86_64-apple-$TARGET-lipo lipo
 popd &>/dev/null || exit 1
 
+## Wrap ranlib to suppress "has no symbols" warnings ##
+#
+# Apple's ranlib warns about object files with no symbols (e.g. empty
+# platform-specific stubs).  These are harmless cross-compilation artifacts.
+# Pass -no_warning_for_no_symbols by default via a small wrapper script.
+#
+
+pushd "$TARGET_DIR/bin" &>/dev/null || exit 1
+for ranlib_bin in *-apple-*-ranlib; do
+  [ -f "$ranlib_bin" ] && [ ! -L "$ranlib_bin" ] || continue
+  mv "$ranlib_bin" "${ranlib_bin}.real"
+  cat > "$ranlib_bin" << 'RANLIB_WRAPPER'
+#!/bin/sh
+_dir=$(cd "$(dirname "$0")" && pwd)
+_lnk=$(readlink "$0")
+if [ -n "$_lnk" ]; then
+  case "$_lnk" in
+    /*) _script="$_lnk" ;;
+    *)  _script="$_dir/$_lnk" ;;
+  esac
+else
+  _script="$_dir/$(basename "$0")"
+fi
+exec "${_script}.real" -no_warning_for_no_symbols "$@"
+RANLIB_WRAPPER
+  chmod +x "$ranlib_bin"
+done
+popd &>/dev/null || exit 1
 
 ## MacPorts ##
 

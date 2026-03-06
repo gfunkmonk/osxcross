@@ -958,6 +958,23 @@ bool Target::setup() {
         fargs.push_back("-Wno-liblto");
     }
 
+#ifndef __APPLE__
+    if (haveArch(Arch::i386)) {
+      //
+      // Silence:
+      // ld: warning: ignoring file libclang_rt.osx.a, file is universal
+      //              (x86_64,x86_64h,arm64,arm64e) but does not contain
+      //              the i386 architecture
+      //
+      // Recent clang versions have dropped i386 from libclang_rt.osx.a.
+      // The linker correctly ignores the file; this is a cross-compilation
+      // artifact, not a user code issue.  ld64 provides no per-warning
+      // suppression flag, so -w (suppress all linker warnings) is used.
+      //
+      fargs.push_back("-Wl,-w");
+    }
+#endif
+
     if (getenv("OSXCROSS_ENABLE_WERROR_IMPLICIT_FUNCTION_DECLARATION"))
       fargs.push_back("-Werror=implicit-function-declaration");
   } else if (isGCC()) {

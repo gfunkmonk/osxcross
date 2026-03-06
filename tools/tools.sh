@@ -30,7 +30,7 @@ function set_path_vars()
   else
     export BASE_DIR=$PWD
     export TARBALL_DIR=$PWD/tarballs
-    export BUILD_DIR=$PWD/build
+    export BUILD_DIR=${BUILD_DIR:-$BASE_DIR/build}
     export TARGET_DIR=${TARGET_DIR:-$BASE_DIR/target}
     export TARGET_DIR_SDK_TOOLS=$TARGET_DIR/SDK/tools
     export PATCH_DIR=$PWD/patches
@@ -521,7 +521,7 @@ function build_xar()
 {
   pushd "$BUILD_DIR" &>/dev/null
 
-  get_sources https://github.com/gfunkmonk/xar.git master
+  get_sources https://github.com/tpoechtrager/xar.git master
 
   if [ $f_res -eq 1 ]; then
     pushd "$CURRENT_BUILD_PROJECT_NAME/xar" &>/dev/null

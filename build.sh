@@ -15,25 +15,28 @@ WARNFLAGS="-Wno-cast-function-type-mismatch -Wno-unused-but-set-variable \
         -Wno-unnecessary-virtual-specifier -Wno-unused-variable -Wno-parentheses \
         -Wno-unused-parameter -Wno-non-virtual-dtor -Wno-ignored-optimization-argument \
         -Wno-variadic-macros -Wno-deprecated-declarations -Wno-ctad-maybe-unsupported"
-CFLAGS="${CFLAGS:-} -O2 -pipe -fomit-frame-pointer ${WARNFLAGS}"
-CXXFLAGS="${CXXFLAGS:-} -O2 -pipe -fomit-frame-pointer ${WARNFLAGS}"
-
-usage() {
-echo -e "\x1B[1;37m Usage: ./build.sh [ OPTIONS ]\x1B[0m"
-echo -e ""
-echo -e "\x1B[1;37m Options:\x1B[0m"
-echo -e ""
-echo -e "\x1B[1;37m   -i, --interactive      \x1B[1;32mShow a menu of SDK versions found in tarballs/ and\x1B[0m"
-echo -e "\x1B[1;32m                          select one interactively. Has no effect if SDK_VERSION\x1B[0m"
-echo -e "\x1B[1;32m                          is already set. (needs dialog or whiptail)\x1B[0m"
-echo -e ""
-echo -e "\x1B[1;37m   -u, --unattended       \x1B[1;33mSkip all interactive prompts (equivalent to UNATTENDED=1).\x1B[0m"
-echo -e ""
-echo -e "\x1B[1;37m   -t, --targetdir <dir>  \x1B[1;36mSets the install directory (equivalent to TARGET_DIR=<dir>).\x1B[0m"
-echo -e ""
-}
+export CFLAGS="${CFLAGS:-} -O2 -pipe -fomit-frame-pointer ${WARNFLAGS}"
+export CXXFLAGS="${CXXFLAGS:-} -O2 -pipe -fomit-frame-pointer ${WARNFLAGS}"
 
 pushd "${0%/*}" &>/dev/null
+
+usage() {
+  echo -e "\x1B[1;37m Usage: ./build.sh [ OPTIONS ]\x1B[0m"
+  echo -e ""
+  echo -e "\x1B[1;37m Options:\x1B[0m"
+  echo -e ""
+  echo -e "\x1B[1;37m   -i, --interactive      \x1B[1;32mShow a menu of SDK versions found in tarballs/ and\x1B[0m"
+  echo -e "\x1B[1;32m                          select one interactively. Has no effect if SDK_VERSION\x1B[0m"
+  echo -e "\x1B[1;32m                          is already set. (needs dialog or whiptail)\x1B[0m"
+  echo -e ""
+  echo -e "\x1B[1;37m   -u, --unattended       \x1B[1;33mSkip all interactive prompts (equivalent to UNATTENDED=1).\x1B[0m"
+  echo -e ""
+  echo -e "\x1B[1;37m   -t, --targetdir <dir>  \x1B[1;36mSet the install directory (equivalent to TARGET_DIR=<dir>).\x1B[0m"
+  echo -e ""
+  echo -e "\x1B[1;37m   -b, --builddir <dir>   \x1B[1;35mSet the build directory (equivalent to BUILD_DIR=<dir>).\x1B[0m"
+  echo -e ""
+
+}
 
 INTERACTIVE=0
 while [[ $# -gt 0 ]]; do
@@ -45,8 +48,13 @@ while [[ $# -gt 0 ]]; do
       if [[ $# -lt 2 || "$2" == -* ]]; then
         echo "error: $1 requires a directory argument" >&2; exit 1
       fi
-      TARGET_DIR="$2"; shift 2 ;;
-    *) echo "Unknown argument: $1" >&2; exit 1 ;;
+      export TARGET_DIR="$2"; shift 2 ;;
+    -b|--builddir)
+      if [[ $# -lt 2 || "$2" == -* ]]; then
+        echo "error: $1 requires a directory argument" >&2; exit 1
+      fi
+      export BUILD_DIR="$2"; shift 2 ;;
+    *) echo "error: unknown argument: $1" >&2; usage; exit 1 ;;
   esac
 done
 
@@ -235,19 +243,20 @@ build_xar
 
 ## Apple Dispatch/Blocks library ##
 
-get_sources https://github.com/gfunkmonk/apple-libdispatch.git main
+if [ $NEED_TAPI_SUPPORT -eq 1 ]; then
+  get_sources https://github.com/gfunkmonk/apple-libdispatch.git main
 
-if [ $f_res -eq 1 ]; then
-  pushd $CURRENT_BUILD_PROJECT_NAME &>/dev/null
-  mkdir -p build
-  pushd build &>/dev/null
-  cmake .. -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=$TARGET_DIR
-  $MAKE install -j$JOBS
-  popd &>/dev/null
-  popd &>/dev/null
-  build_success
+  if [ $f_res -eq 1 ]; then
+    pushd $CURRENT_BUILD_PROJECT_NAME &>/dev/null
+    mkdir -p build
+    pushd build &>/dev/null
+    cmake .. -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=$TARGET_DIR
+    $MAKE install -j$JOBS
+    popd &>/dev/null
+    popd &>/dev/null
+    build_success
+  fi
 fi
-
 
 ## Apple TAPI Library ##
 
@@ -265,6 +274,11 @@ if [ $NEED_TAPI_SUPPORT -eq 1 ]; then
 fi
 
 ## cctools and ld64 ##
+
+if [ $NEED_TAPI_SUPPORT -eq 0 ]; then
+  export CCTOOLS_VERSION=986
+  export LINKER_VERSION=711
+fi
 
 get_sources \
   https://github.com/gfunkmonk/cctools-port.git \

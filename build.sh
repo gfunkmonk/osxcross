@@ -343,20 +343,8 @@ pushd "$TARGET_DIR/bin" &>/dev/null || exit 1
 for ranlib_bin in *-apple-*-ranlib; do
   [ -f "$ranlib_bin" ] && [ ! -L "$ranlib_bin" ] && [ ! -f "${ranlib_bin}.real" ] || continue
   mv "$ranlib_bin" "${ranlib_bin}.real"
-  cat > "$ranlib_bin" << 'RANLIB_WRAPPER'
-#!/bin/sh
-_dir=$(cd "$(dirname "$0")" && pwd)
-_lnk=$(readlink "$0")
-if [ -n "$_lnk" ]; then
-  case "$_lnk" in
-    /*) _script="$_lnk" ;;
-    *)  _script="$_dir/$_lnk" ;;
-  esac
-else
-  _script="$_dir/$(basename "$0")"
-fi
-exec "${_script}.real" -no_warning_for_no_symbols "$@"
-RANLIB_WRAPPER
+  _ranlib_real="$(pwd)/${ranlib_bin}.real"
+  printf '#!/bin/sh\nexec "%s" -no_warning_for_no_symbols "$@"\n' "$_ranlib_real" > "$ranlib_bin"
   chmod +x "$ranlib_bin"
 done
 popd &>/dev/null || exit 1

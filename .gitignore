@@ -2,6 +2,7 @@
 *gcc*.tar.*
 *MacOSX*.*
 cpucount
+wrapper/wrapper
 build/
 target/
 tarballs/*.tar.*

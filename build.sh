@@ -35,6 +35,8 @@ usage() {
   echo -e ""
   echo -e "\x1B[1;37m   -b, --builddir <dir>   \x1B[1;35mSet the build directory (equivalent to BUILD_DIR=<dir>).\x1B[0m"
   echo -e ""
+  echo -e "\x1B[1;37m   -a, --archs <dir>      \x1B[1;34mOverrides target archs (i.e. -a i386 = builds only i386).\x1B[0m"
+  echo -e ""
 
 }
 
@@ -54,6 +56,11 @@ while [[ $# -gt 0 ]]; do
         echo "error: $1 requires a directory argument" >&2; exit 1
       fi
       export BUILD_DIR="$2"; shift 2 ;;
+    -a|--archs)
+      if [[ $# -lt 2 || "$2" == -* ]]; then
+        echo "error: $1 requires an argument" >&2; exit 1
+      fi
+      export SUPPORTED_ARCHS="${2%/}"; shift 2 ;;
     *) echo "error: unknown argument: $1" >&2; usage; exit 1 ;;
   esac
 done
@@ -138,6 +145,8 @@ case $SDK_VERSION in
       ;;
 esac
 
+_USER_SUPPORTED_ARCHS="${SUPPORTED_ARCHS:-}"
+
 case $SDK_VERSION in
   10.6*)   TARGET=darwin10;   SUPPORTED_ARCHS="i386 x86_64"; NEED_TAPI_SUPPORT=0; OSX_VERSION_MIN_INT=10.6 ;;
   10.7*)   TARGET=darwin11;   SUPPORTED_ARCHS="i386 x86_64"; NEED_TAPI_SUPPORT=0; OSX_VERSION_MIN_INT=10.6 ;;
@@ -182,6 +191,9 @@ case $SDK_VERSION in
   26.4*) TARGET=darwin25.4;   SUPPORTED_ARCHS="arm64 arm64e x86_64 x86_64h"; NEED_TAPI_SUPPORT=1; OSX_VERSION_MIN_INT=11.0 ;;
   *) echo "Unsupported SDK"; exit 1 ;;
 esac
+
+[[ -n "$_USER_SUPPORTED_ARCHS"  ]] && export SUPPORTED_ARCHS="$_USER_SUPPORTED_ARCHS"
+unset _USER_SUPPORTED_ARCHS
 
 if [ -n "$ENABLE_ARCHS" ]; then
   for arch in $ENABLE_ARCHS; do
@@ -243,7 +255,7 @@ build_xar
 
 ## Apple Dispatch/Blocks library ##
 
-if [ $NEED_TAPI_SUPPORT -eq 1 ]; then
+#if [ $NEED_TAPI_SUPPORT -eq 1 ]; then
   get_sources https://github.com/gfunkmonk/apple-libdispatch.git main
 
   if [ $f_res -eq 1 ]; then
@@ -256,7 +268,7 @@ if [ $NEED_TAPI_SUPPORT -eq 1 ]; then
     popd &>/dev/null
     build_success
   fi
-fi
+#fi
 
 ## Apple TAPI Library ##
 
@@ -275,10 +287,10 @@ fi
 
 ## cctools and ld64 ##
 
-if [ $NEED_TAPI_SUPPORT -eq 0 ]; then
-  export CCTOOLS_VERSION=986
-  export LINKER_VERSION=711
-fi
+#if [ $NEED_TAPI_SUPPORT -eq 0 ]; then
+#  export CCTOOLS_VERSION=986
+#  export LINKER_VERSION=711
+#fi
 
 get_sources \
   https://github.com/gfunkmonk/cctools-port.git \

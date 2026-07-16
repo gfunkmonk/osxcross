@@ -36,6 +36,11 @@ on:
         required: false
         type: boolean
         default: true
+      sdk_27:
+        description: 'Build macOS 27 SDKs'
+        required: false
+        type: boolean
+        default: true
     outputs:
       SDK_VERSIONS:
         description: "List of SDK versions built"
@@ -62,6 +67,10 @@ jobs:
           fi
           if [ "${{ inputs.sdk_26 }}" == "true" ]; then
             SDK_VERSIONS="${SDK_VERSIONS}${SEPARATOR}26"
+            SEPARATOR=","
+          fi
+          if [ "${{ inputs.sdk_27 }}" == "true" ]; then
+            SDK_VERSIONS="${SDK_VERSIONS}${SEPARATOR}27"
             SEPARATOR=","
           fi
           SDK_VERSIONS="${SDK_VERSIONS}]"

@@ -19,6 +19,11 @@ on:
         required: false
         type: boolean
         default: true
+      sdk_27:
+        description: 'Build macOS 27 SDKs'
+        required: false
+        type: boolean
+        default: true
   workflow_call:
     inputs:
       sdk_14:
